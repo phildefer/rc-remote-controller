@@ -30,6 +30,7 @@
 #include <vars.h>
 #include <ui.h>
 #include "model.h"
+#include "model_fs.h"
 
 #define LOG_LEVEL CONFIG_LOG_DEFAULT_LEVEL
 #include <zephyr/logging/log.h>
@@ -909,6 +910,13 @@ void action_update_init_bar(lv_event_t *e) {
 int main(void)
 {
 	const struct device *display_dev;
+	int rc;
+
+	rc = model_fs_init();
+	if (rc != 0) {
+		LOG_ERR("model_fs_init failed (%d)", rc);
+		return rc;
+	}
 
 	/* Initialize UI variables */
 	set_var_binding_led_color(0xFF0000); // Red color for binding status LED
