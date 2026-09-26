@@ -289,23 +289,21 @@ int model_fs_delete_model(const char *name)
 	return rc;
 }
 
-int model_fs_list_models(char *buf, size_t buf_len)
+int model_fs_list_models(char **models, size_t *model_count)
 {
 	struct fs_dir_t dir;
 	struct fs_dirent entry;
 	int rc;
-	size_t off = 0;
 
-	if (buf == NULL || buf_len == 0U) {
+	if (models == NULL || model_count == NULL) {
 		return -EINVAL;
 	}
 
-	buf[0] = '\0';
+	*model_count = 0U;
 	fs_dir_t_init(&dir);
 
 	rc = fs_opendir(&dir, MODEL_FS_MODELS_DIR);
 	if (rc == -ENOENT) {
-		buf[0] = '\0';
 		return 0;
 	}
 	if (rc != 0) {
@@ -323,20 +321,17 @@ int model_fs_list_models(char *buf, size_t buf_len)
 			break;
 		}
 
-		if (entry.type == FS_DIR_ENTRY_FILE) {
-			int written = snprintf(buf + off,
-					      buf_len - off,
-					      "%s\n",
-					      entry.name);
+		if (entry.type == FS_DIR_ENTRY_FILE && *model_count < MODEL_MAX_COUNT) {
+			size_t name_len = strlen(entry.name);
+			size_t model_name_len = name_len;
 
-			if (written < 0) {
-				break;
+			if (model_name_len >= MODEL_FS_MODEL_NAME_LEN) {
+				model_name_len = MODEL_FS_MODEL_NAME_LEN - 1U;
 			}
 
-			off += (size_t)written;
-			if (off >= buf_len) {
-				break;
-			}
+			memcpy(models[*model_count], entry.name, model_name_len);
+			models[*model_count][model_name_len] = '\0';
+			(*model_count)++;
 		}
 	}
 

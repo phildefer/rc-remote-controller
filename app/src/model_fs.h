@@ -6,6 +6,8 @@
 
 #include "model.h"
 
+#define MODEL_FS_MODEL_NAME_LEN MODEL_NAME_MAX
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -14,7 +16,7 @@ int model_fs_init(void);
 int model_fs_save_model(const char *name, const model_t *model);
 int model_fs_load_model(const char *name, model_t *model);
 int model_fs_delete_model(const char *name);
-int model_fs_list_models(char *buf, size_t buf_len);
+int model_fs_list_models(char **models, size_t *model_count);
 int model_fs_erase_all(void);
 
 #ifdef __cplusplus

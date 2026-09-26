@@ -295,17 +295,8 @@ int initialize_rf_parameters(struct rf_settings *settings) {
 		return -1; // Error: Null pointer
 	}
 
-	if (active_model_index == 0xFF) {
-		// No active model, create a default one
-		uint8_t idx = model_create("Default Model");
-		active_model_index = load_model(model_name_get(idx), settings->ch_settings);
-	} else {
-		active_model_index = load_model(get_var_device_name(), settings->ch_settings);
-	}
-	if (active_model_index == 0xFF) {
-		LOG_ERR("Failed to load model");
-		return -1;
-	}
+	/* active model shall be populated before calling this function */
+
 	/* read changed pins value */
 	gpio_port_get_raw(pcf_dev, &changed_pins);
 
@@ -382,6 +373,7 @@ void action_new_device_add(lv_event_t *e) {
  */
 void action_delete_device(lv_event_t *e) {
 	ARG_UNUSED(e);
+	
 	if (model_remove(active_model_index) != 0) {
 		LOG_ERR("Failed to remove model");
 		return;
@@ -910,7 +902,13 @@ void action_update_init_bar(lv_event_t *e) {
 int main(void)
 {
 	const struct device *display_dev;
+	char buf[MODEL_MAX_COUNT][MODEL_NAME_MAX] = {0};
+	size_t models_num = 0;
 	int rc;
+
+	/* Initialize UI variables */
+	set_var_binding_led_color(0xFF0000); // Red color for binding status LED
+	set_var_load_bar_progress(1); // 1% progress at the start of initialization
 
 	rc = model_fs_init();
 	if (rc != 0) {
@@ -918,9 +916,34 @@ int main(void)
 		return rc;
 	}
 
-	/* Initialize UI variables */
-	set_var_binding_led_color(0xFF0000); // Red color for binding status LED
-	set_var_load_bar_progress(10); // 10% progress at the start of initialization
+	rc = model_fs_list_models(buf, *models_num);
+	if (rc < 0) {
+		LOG_ERR("model_fs_list_models failed (%d)", rc);
+		return rc;
+	}
+
+	if (*models_num == 0) {
+		LOG_INF("No models found, creating default model");
+		if (model_create("Default Model") == 0) {
+			LOG_INF("Default model created successfully");
+			set_var_device_name(active_model.name);
+			model_save(active_model.ch, active_model.channel_selection);
+		} else {
+			LOG_ERR("Failed to create default model");
+			return -1;
+		}
+	} else {
+		LOG_INF("%zu models found", *models_num);
+	}
+	/* Set the first model as the active device */
+	set_var_device_name(buf[0]);
+	load_model(get_var_device_name());
+
+	/* Populate device list from file system */
+	for (size_t i = 0; i < models_num; i++) {
+    	set_var_device_list(buf[i]);
+	}
+	set_var_load_bar_progress(10);
 
 	display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 

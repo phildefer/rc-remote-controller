@@ -58,16 +58,12 @@ typedef struct {
     uint8_t channel_selection[MODEL_SELECTION_COUNT]; /* ch1..ch4 selected source channel */
 } model_t;
 
-#ifndef MODEL_FLASH_SECTION
-#define MODEL_FLASH_SECTION __attribute__((section(".rodata.model_data")))
-#endif
-
 /* The persistent model list is placed in a dedicated linker section.
  * Using `.rodata.model_data` keeps the array in read-only flash storage,
  * and __attribute__((used)) prevents the linker from discarding it.
  */
-extern model_t model_storage[MODEL_MAX_COUNT];
-extern uint8_t active_model_index;
+extern model_t active_model;
+
 extern uint8_t def_map(
 	const uint16_t min,
 	const uint16_t max,
@@ -76,35 +72,30 @@ extern uint8_t def_map(
 	const bool is_reversed);
 
 /* Create a new model with the given name .
- * Returns index (0..MODEL_MAX_COUNT-1) on success or 0xFF on error.
+ * Returns 0 or error code.
  */
-uint8_t model_create(const char *name);
+int model_create(const char *name);
 
-/* Find the first used model slot.
- * Returns the valid index on success or 0xFF if no used model exists.
+/* Store active model in persistent Storage. 
+ * Returns 0 on success, error code on error
  */
-uint8_t model_find_used_index(void);
+int model_save(const struct channel_map *map, const uint8_t *sel);
 
-/* Overwrite an existing model's data. Returns 0 on success, 1 on error. */
-uint8_t model_save(int index, const struct channel_map *map, const uint8_t *sel);
-
-/* Remove a model at index. Returns 0 on success, 1 on error. */
-uint8_t model_remove(int index);
-
-/* Get model name by index, or NULL if invalid/unused. */
-const char *model_name_get(int index);
+/* Remove a model at index. Returns 0 on success, error code on error. */
+int model_remove(int index);
 
 /**
- * @brief Load the active model channel map.
+ * @brief Load the active model from persistent storage.
  *
- * Loads the model identified by the given name into the provided channel map array.
+ * Loads the model identified by the given name into the active model.
+ * Sets UI parameters from active_model.
  *
  * @param name Pointer to model name.
- * @param ch_array Destination channel map array.
- * @return active model index or 0xFF in case of error.
+ * @return 0 or error code.
  */
-uint8_t load_model(const char *model_name, struct channel_map *ch_array);
-
+ * @return 0 or error code.
+ */
+int load_model(const char *model_name);
 
 #ifdef __cplusplus
 }
