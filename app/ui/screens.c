@@ -573,7 +573,7 @@ void create_screen_settings() {
                             lv_obj_set_size(obj, 150, LV_SIZE_CONTENT);
                             lv_dropdown_set_options(obj, "");
                             lv_dropdown_set_selected(obj, 0);
-                            lv_obj_add_event_cb(obj, action_load_device_list_changed, LV_EVENT_CLICKED, (void *)0);
+                            lv_obj_add_event_cb(obj, action_load_device_list_changed, LV_EVENT_VALUE_CHANGED, (void *)0);
                         }
                         {
                             // LoadDeviceLabel
