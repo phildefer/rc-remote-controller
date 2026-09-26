@@ -994,7 +994,7 @@ static int nrf24l01_init(const struct device *dev)
 
 #define NRF24L01_DEFINE(i)                                               \
 	static const struct nrf24l01_config nrf24l01_config_##i = {          \
-		.spi = SPI_DT_SPEC_INST_GET(i, NRF24L01_SPI_MODE, 2),            \
+		.spi = SPI_DT_SPEC_INST_GET(i, NRF24L01_SPI_MODE),            \
 		.ce = GPIO_DT_SPEC_INST_GET(i, ce_gpios),                        \
 		IF_ENABLED(CONFIG_NRF24L01_TRIGGER,                              \
 			(.irq = GPIO_DT_SPEC_INST_GET(i, irq_gpios),))               \
