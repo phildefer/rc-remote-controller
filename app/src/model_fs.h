@@ -6,8 +6,6 @@
 
 #include "model.h"
 
-#define MODEL_FS_MODEL_NAME_LEN MODEL_NAME_MAX
-
 #ifdef __cplusplus
 extern "C" {
 #endif

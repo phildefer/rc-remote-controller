@@ -64,6 +64,7 @@ typedef struct {
  */
 extern model_t active_model;
 
+
 extern uint8_t def_map(
 	const uint16_t min,
 	const uint16_t max,
@@ -71,31 +72,30 @@ extern uint8_t def_map(
 	      uint16_t data,
 	const bool is_reversed);
 
-/* Create a new model with the given name .
+/* Initialize UI active model & UI model list.
+ * Returns 0 on success, error code on error.
+ */
+int model_init(void);
+
+/* Add a new model with the given name .
  * Returns 0 or error code.
  */
-int model_create(const char *name);
+int model_add(const char *name);
 
 /* Store active model in persistent Storage. 
  * Returns 0 on success, error code on error
  */
-int model_save(const struct channel_map *map, const uint8_t *sel);
+int model_store(const struct channel_map *map, const uint8_t *sel);
 
-/* Remove a model at index. Returns 0 on success, error code on error. */
-int model_remove(int index);
+/* Remove a model based on its name. 
+ * Returns 0 on success, error code on error.
+ */
+int model_remove(char *model_name);
 
-/**
- * @brief Load the active model from persistent storage.
- *
- * Loads the model identified by the given name into the active model.
- * Sets UI parameters from active_model.
- *
- * @param name Pointer to model name.
- * @return 0 or error code.
+/* Load a model and make it the active model.
+ * return 0 or error code.
  */
- * @return 0 or error code.
- */
-int load_model(const char *model_name);
+int model_load(const char *model_name);
 
 #ifdef __cplusplus
 }

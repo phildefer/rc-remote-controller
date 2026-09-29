@@ -30,7 +30,6 @@
 #include <vars.h>
 #include <ui.h>
 #include "model.h"
-#include "model_fs.h"
 
 #define LOG_LEVEL CONFIG_LOG_DEFAULT_LEVEL
 #include <zephyr/logging/log.h>
@@ -296,7 +295,8 @@ int initialize_rf_parameters(struct rf_settings *settings) {
 	}
 
 	/* active model shall be populated before calling this function */
-
+	memcpy(settings->ch_settings, active_model.ch, sizeof(active_model.ch));
+	
 	/* read changed pins value */
 	gpio_port_get_raw(pcf_dev, &changed_pins);
 
@@ -372,70 +372,57 @@ void action_new_device_add(lv_event_t *e) {
  * @param
  */
 void action_delete_device(lv_event_t *e) {
-	ARG_UNUSED(e);
-	
-	if (model_remove(active_model_index) != 0) {
+	/* Retrieve model name from event */
+	char model_name[MODEL_NAME_MAX];
+	lv_obj_t *dropb = lv_event_get_target_obj(e);
+	lv_dropdown_get_selected_str(dropb, model_name, sizeof(model_name));
+
+	if (model_remove(model_name) != 0) {
 		LOG_ERR("Failed to remove model");
 		return;
 	}
 	LOG_INF("Model removed successfully");
-	set_var_device_list("");
-
-	if (active_model_index > 0 && active_model_index < MODEL_MAX_COUNT) {
-		active_model_index--;
-	} else {
-		active_model_index = model_find_used_index();
+	if (initialize_rf_parameters(&rf_parameters) != 0) {
+		LOG_ERR("Failed to initialize RF parameters");
 	}
-
-	if (active_model_index != 0xFF) {
-		set_var_device_name(model_name_get(active_model_index));
-	}
-	else {
-		LOG_INF("No used model found after deletion");
-		// Reset device list and create a default model
-		set_var_device_list("");
-		model_create("Default Model");
-	}
-	active_model_index = load_model(get_var_device_name(), rf_parameters.ch_settings);
-	LOG_INF("Loaded model: %s", get_var_device_name());
-	set_var_device_list("");
-
 }
 
 void action_device_name_ok_button_pressed(lv_event_t *e) {
-    // TODO: Implement action device_name_ok_button_pressed here
-	loadScreen(SCREEN_ID_SETTINGS);
-	uint8_t idx = model_create(get_var_device_name());
+	/* Retrieve model name from event */
+	char model_name[MODEL_NAME_MAX];
+	lv_obj_t *dropb = lv_event_get_target_obj(e);
+	lv_dropdown_get_selected_str(dropb, model_name, sizeof(model_name));
+	
+	int rc = model_add(model_name);
 
-	if (idx < 0xFF) {
-		LOG_INF("Model created successfully at index %d", idx);
-		active_model_index = load_model(get_var_device_name(), rf_parameters.ch_settings);
+	if (rc == 0) {
+		LOG_INF("Model %s created successfully", model_name);
+		if (initialize_rf_parameters(&rf_parameters) != 0) {
+				LOG_ERR("Failed to initialize RF parameters");
+		}
 	} else {
-		LOG_ERR("Failed to create model");
+		LOG_ERR("Failed to add new model %s", model_name);
 	}
-	set_var_device_list("");
+	loadScreen(SCREEN_ID_SETTINGS);
 }
 
 
 void action_device_name_back_button_pressed(lv_event_t *e) {
-    // TODO: Implement action device_name_back_button_pressed here
-	loadScreen(SCREEN_ID_SETTINGS);
+    loadScreen(SCREEN_ID_SETTINGS);
 }
 
 
 void action_save_button_pressed(lv_event_t *e) {
-	ARG_UNUSED(e);
-	// Save the current model settings
-	uint8_t channel_selection[MODEL_SELECTION_COUNT] = {
-		get_var_selection1(),
-		get_var_selection2(),
-		get_var_selection3(),
-		get_var_selection4()
-	};
-	if (model_save(active_model_index, rf_parameters.ch_settings, channel_selection) == 0) {
-		LOG_INF("Model saved successfully");
+	UNUSED(e);
+	int rc = model_store(active_model.ch, active_model.channel_selection);
+
+	if (rc == 0) {
+		LOG_INF("Model settings stored successfully");
+		if (initialize_rf_parameters(&rf_parameters) != 0) {
+			LOG_ERR("Failed to initialize RF parameters");
+		}
 	} else {
-		LOG_ERR("Failed to save model");
+		LOG_ERR("Failed to store model settings");
 	}
 	loadScreen(SCREEN_ID_MAIN);
 }
@@ -444,19 +431,18 @@ void action_save_button_pressed(lv_event_t *e) {
 void action_load_device_list_changed(lv_event_t *e) {
     char selected_model_name[MODEL_NAME_MAX];
 	lv_obj_t *dropb = lv_event_get_target_obj(e);
-	
+	int rc;
 	lv_dropdown_get_selected_str(dropb, selected_model_name, sizeof(selected_model_name));
 
-	if (strncmp(selected_model_name, get_var_device_name(), MODEL_NAME_MAX) == 0) {
-		LOG_INF("Selected model is the same as the current one: %s", selected_model_name);
-		return; // No change, do nothing
-	}
-
-	active_model_index = load_model(selected_model_name, rf_parameters.ch_settings);
-	if (active_model_index != 0xFF) {
+	rc = model_load(selected_model_name);
+	if (rc == 0) {
 		LOG_INF("Loaded model: %s", selected_model_name);
 	} else {
 		LOG_ERR("Failed to load model: %s", selected_model_name);
+		return;
+	}
+	if (initialize_rf_parameters(&rf_parameters) != 0) {
+		LOG_ERR("Failed to initialize RF parameters");
 	}
 }
 
@@ -902,46 +888,15 @@ void action_update_init_bar(lv_event_t *e) {
 int main(void)
 {
 	const struct device *display_dev;
-	char buf[MODEL_MAX_COUNT][MODEL_NAME_MAX] = {0};
-	size_t models_num = 0;
-	int rc;
 
 	/* Initialize UI variables */
 	set_var_binding_led_color(0xFF0000); // Red color for binding status LED
 	set_var_load_bar_progress(1); // 1% progress at the start of initialization
 
-	rc = model_fs_init();
-	if (rc != 0) {
-		LOG_ERR("model_fs_init failed (%d)", rc);
-		return rc;
-	}
-
-	rc = model_fs_list_models(buf, *models_num);
-	if (rc < 0) {
-		LOG_ERR("model_fs_list_models failed (%d)", rc);
-		return rc;
-	}
-
-	if (*models_num == 0) {
-		LOG_INF("No models found, creating default model");
-		if (model_create("Default Model") == 0) {
-			LOG_INF("Default model created successfully");
-			set_var_device_name(active_model.name);
-			model_save(active_model.ch, active_model.channel_selection);
-		} else {
-			LOG_ERR("Failed to create default model");
-			return -1;
-		}
-	} else {
-		LOG_INF("%zu models found", *models_num);
-	}
-	/* Set the first model as the active device */
-	set_var_device_name(buf[0]);
-	load_model(get_var_device_name());
-
-	/* Populate device list from file system */
-	for (size_t i = 0; i < models_num; i++) {
-    	set_var_device_list(buf[i]);
+	/* Initialize file system & load active model */
+	if (model_init() != 0) {
+		LOG_ERR("model_init failed");
+		return -EIO;
 	}
 	set_var_load_bar_progress(10);
 
@@ -950,7 +905,7 @@ int main(void)
 	/* Check if the Display device is ready */
 	if (!device_is_ready(display_dev)) {
 		LOG_ERR("Device not ready, aborting test");
-		return 0;
+		return -ENODEV;
 	}
 
 	// Short delay to ensure everything is settled before starting the main loop
