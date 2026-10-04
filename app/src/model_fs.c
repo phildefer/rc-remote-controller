@@ -12,6 +12,7 @@
 #include <zephyr/storage/flash_map.h>
 #include <zephyr/logging/log.h>
 
+#include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -43,6 +44,8 @@ struct model_blob {
 };
 
 FS_LITTLEFS_DECLARE_DEFAULT_CONFIG(storage_lfs);
+
+// FS_LITTLEFS_DECLARE_CUSTOM_CONFIG(storage_lfs, 4, 1, 16, 256, 32);
 
 static struct fs_mount_t model_fs_mount = {
 	.type = FS_LITTLEFS,
@@ -95,10 +98,41 @@ static void blob_to_model(const struct model_blob *blob, model_t *model)
 	       sizeof(model->channel_selection));
 }
 
+static int validate_model_name(const char *name)
+{
+	size_t i;
+
+	if (name == NULL) {
+		return -EINVAL;
+	}
+
+	for (i = 0; i < MODEL_NAME_MAX; i++) {
+		unsigned char ch = (unsigned char)name[i];
+
+		if (ch == '\0') {
+			return (i > 0) ? 0 : -EINVAL;
+		}
+		if (i == MODEL_NAME_MAX - 1U) {
+			return -ENAMETOOLONG;
+		}
+		if (ch == '/' || ch == '\\') {
+			return -EINVAL;
+		}
+	}
+
+	return -ENAMETOOLONG;
+}
+
 static int build_model_path(const char *name, char *out, size_t out_len)
 {
-	int written = snprintf(out, out_len, "%s/%s.bin", MODEL_FS_MODELS_DIR, name);
+	int rc = validate_model_name(name);
+	int written;
 
+	if (rc != 0) {
+		return rc;
+	}
+
+	written = snprintf(out, out_len, "%s/%s.bin", MODEL_FS_MODELS_DIR, name);
 	if (written < 0 || (size_t)written >= out_len) {
 		return -ENAMETOOLONG;
 	}
@@ -108,10 +142,23 @@ static int build_model_path(const char *name, char *out, size_t out_len)
 
 static int ensure_models_dir(void)
 {
-	int rc = fs_mkdir(MODEL_FS_MODELS_DIR);
+	struct fs_dirent entry;
+	int rc = fs_stat(MODEL_FS_MODELS_DIR, &entry);
 
+	if (rc == 0) {
+		return entry.type == FS_DIR_ENTRY_DIR ? 0 : -ENOTDIR;
+	}
+	if (rc != -ENOENT) {
+		return rc;
+	}
+
+	rc = fs_mkdir(MODEL_FS_MODELS_DIR);
 	if (rc == -EEXIST) {
-		return 0;
+		rc = fs_stat(MODEL_FS_MODELS_DIR, &entry);
+		if (rc == 0 && entry.type == FS_DIR_ENTRY_DIR) {
+			return 0;
+		}
+		return rc != 0 ? rc : -ENOTDIR;
 	}
 
 	return rc;
@@ -121,33 +168,22 @@ static int modelfs_mount(void)
 {
 	int rc = fs_mount(&model_fs_mount);
 
-	if (rc == 0) {
-		LOG_INF("LittleFS mounted at %s", MODEL_FS_MOUNT_POINT);
-		return 0;
-	}
-
-	if (rc != -ENOENT) {
+	if (rc != 0 ) {
 		LOG_ERR("Failed to mount LittleFS: %d", rc);
 		return rc;
 	}
 
-	/* If the filesystem is not yet formatted, mount may fail with -ENOENT.
-	 * Prepare the models directory and retry once so the storage layout is
-	 * established before the first user operation.
-	 */
+	LOG_INF("LittleFS mounted at %s", MODEL_FS_MOUNT_POINT);
+
+	/* Ensure the models directory exists without erasing existing storage. */
 	rc = ensure_models_dir();
+
 	if (rc != 0) {
 		LOG_ERR("Failed to prepare %s: %d", MODEL_FS_MODELS_DIR, rc);
 		return rc;
 	}
 
-	rc = fs_mount(&model_fs_mount);
-	if (rc == 0) {
-		LOG_INF("LittleFS mounted at %s", MODEL_FS_MOUNT_POINT);
-		return 0;
-	}
-
-	LOG_ERR("LittleFS mount failed after directory setup: %d", rc);
+	LOG_INF("LittleFS %s ready for use", MODEL_FS_MOUNT_POINT);
 	return rc;
 }
 
@@ -228,6 +264,9 @@ int model_fs_save_model(const char *name, const model_t *model)
 	if (name == NULL || model == NULL) {
 		return -EINVAL;
 	}
+	if (validate_model_name(model->name) != 0 || strcmp(name, model->name) != 0) {
+		return -EINVAL;
+	}
 
 	rc = build_model_path(name, path, sizeof(path));
 	if (rc != 0) {
@@ -258,7 +297,8 @@ int model_fs_load_model(const char *name, model_t *model)
 		return rc;
 	}
 
-	if (blob.magic != MODEL_FS_MAGIC || blob.version != MODEL_FS_VERSION) {
+	if (blob.magic != MODEL_FS_MAGIC || blob.version != MODEL_FS_VERSION ||
+	    validate_model_name(blob.name) != 0 || strcmp(blob.name, name) != 0) {
 		LOG_ERR("Invalid model blob in %s", path);
 		return -EIO;
 	}
@@ -289,10 +329,11 @@ int model_fs_delete_model(const char *name)
 	return rc;
 }
 
-int model_fs_list_models(char **models, size_t *model_count)
+int model_fs_list_models(char models[][MODEL_NAME_MAX], size_t *model_count)
 {
 	struct fs_dir_t dir;
 	struct fs_dirent entry;
+	static const char suffix[] = ".bin";
 	int rc;
 
 	if (models == NULL || model_count == NULL) {
@@ -322,21 +363,30 @@ int model_fs_list_models(char **models, size_t *model_count)
 		}
 
 		if (entry.type == FS_DIR_ENTRY_FILE && *model_count < MODEL_MAX_COUNT) {
-			size_t name_len = strlen(entry.name);
-			size_t model_name_len = name_len;
+			size_t file_name_len = strlen(entry.name);
+			size_t model_name_len;
 
-			if (model_name_len >= MODEL_FS_MODEL_NAME_LEN) {
-				model_name_len = MODEL_FS_MODEL_NAME_LEN - 1U;
+			if (file_name_len <= sizeof(suffix) - 1U ||
+			    memcmp(entry.name + file_name_len - (sizeof(suffix) - 1U),
+				   suffix, sizeof(suffix) - 1U) != 0) {
+				continue;
+			}
+
+			model_name_len = file_name_len - (sizeof(suffix) - 1U);
+			if (model_name_len >= MODEL_NAME_MAX) {
+				continue;
 			}
 
 			memcpy(models[*model_count], entry.name, model_name_len);
 			models[*model_count][model_name_len] = '\0';
-			(*model_count)++;
+			if (validate_model_name(models[*model_count]) == 0) {
+				(*model_count)++;
+			}
 		}
 	}
 
 	fs_closedir(&dir);
-	return 0;
+	return rc < 0 ? rc : 0;
 }
 
 int model_fs_erase_all(void)

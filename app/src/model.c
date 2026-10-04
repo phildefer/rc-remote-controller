@@ -11,6 +11,7 @@
 #include "vars.h"
 #include <zephyr/logging/log.h>
 
+#include <errno.h>
 #include <string.h>
 
 LOG_MODULE_REGISTER(model, CONFIG_LOG_DEFAULT_LEVEL);
@@ -36,7 +37,7 @@ static model_t new_model;
  */
 static int model_create(const char *name)
 {
-    memset(new_model.name, 0, MODEL_NAME_MAX);
+    memset(new_model.name, '\0', MODEL_NAME_MAX);
 
     for (uint8_t j = 0; j < MAX_CHANNELS; j++) {
         new_model.ch[j].min = 0+CALIBRATION_OFFSET;
@@ -77,7 +78,7 @@ int model_init(void)
 		return rc;
 	}
 
-	rc = model_fs_list_models((char **)buf, &models_num);
+	rc = model_fs_list_models(buf, &models_num);
 	if (rc < 0) {
 		LOG_ERR("model_fs_list_models failed (%d)", rc);
 		return rc;
@@ -85,11 +86,17 @@ int model_init(void)
 
 	if (models_num == 0) {
 		LOG_INF("No models found, creating default model");
-		if (model_add("Default Model") == 0) {
-			LOG_INF("Default model created successfully");
-		} else {
+		rc = model_add("Default Model\0");
+		if (rc != 0) {
 			LOG_ERR("Failed to create default model");
-			return -1;
+			return rc;
+		}
+		LOG_INF("Default model created successfully");
+
+		rc = model_fs_list_models(buf, &models_num);
+		if (rc < 0 || models_num == 0U) {
+			LOG_ERR("Failed to list newly created default model: %d", rc);
+			return rc < 0 ? rc : -EIO;
 		}
 	} else {
 		LOG_INF("%zu models found", models_num);
@@ -216,7 +223,7 @@ int model_remove(char *model_name)
             LOG_ERR("Failed to remove model '%s' from storage: %d", model_name, rc);
             return rc;
         }
-        rc = model_fs_list_models((char **)model_list, &model_count);
+        rc = model_fs_list_models(model_list, &model_count);
         if (rc != 0) {
             LOG_ERR("Failed to list models: %d", rc);
             return rc;

@@ -495,7 +495,7 @@ static void refresh_device_list() {
     char buf[MODEL_MAX_COUNT][MODEL_NAME_MAX] = {0};
     size_t models_num = 0;
 
-    int rc = model_fs_list_models((char **)buf, &models_num);
+    int rc = model_fs_list_models(buf, &models_num);
     if (rc != 0) {
         return;
     }
