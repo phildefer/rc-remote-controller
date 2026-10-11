@@ -372,10 +372,21 @@ void action_new_device_add(lv_event_t *e) {
  * @param
  */
 void action_delete_device(lv_event_t *e) {
-	/* Retrieve model name from event */
-	char model_name[MODEL_NAME_MAX];
-	lv_obj_t *dropb = lv_event_get_target_obj(e);
-	lv_dropdown_get_selected_str(dropb, model_name, sizeof(model_name));
+	ARG_UNUSED(e);
+	char model_name[MODEL_NAME_MAX] = {0};
+	size_t name_len;
+
+	if (objects.device_list == NULL) {
+		LOG_ERR("Device list is unavailable");
+		return;
+	}
+
+	lv_dropdown_get_selected_str(objects.device_list, model_name, sizeof(model_name));
+	name_len = strnlen(model_name, sizeof(model_name));
+	if (name_len == 0U || name_len >= sizeof(model_name)) {
+		LOG_ERR("No valid device name is selected");
+		return;
+	}
 
 	if (model_remove(model_name) != 0) {
 		LOG_ERR("Failed to remove model");
@@ -388,11 +399,24 @@ void action_delete_device(lv_event_t *e) {
 }
 
 void action_device_name_ok_button_pressed(lv_event_t *e) {
-	/* Retrieve model name from event */
+	ARG_UNUSED(e);
+	const char *entered_name = lv_textarea_get_text(objects.model_name_text);
 	char model_name[MODEL_NAME_MAX];
-	lv_obj_t *dropb = lv_event_get_target_obj(e);
-	lv_dropdown_get_selected_str(dropb, model_name, sizeof(model_name));
-	
+	size_t name_len;
+
+	if (entered_name == NULL) {
+		LOG_ERR("Model name textarea is unavailable");
+		return;
+	}
+
+	name_len = strlen(entered_name);
+	if (name_len == 0U || name_len >= sizeof(model_name)) {
+		LOG_ERR("Model name must contain 1 to %u characters", MODEL_NAME_MAX - 1);
+		return;
+	}
+
+	memcpy(model_name, entered_name, name_len + 1U);
+
 	int rc = model_add(model_name);
 
 	if (rc == 0) {
@@ -414,6 +438,13 @@ void action_device_name_back_button_pressed(lv_event_t *e) {
 
 void action_save_button_pressed(lv_event_t *e) {
 	UNUSED(e);
+
+	/* Retrieve the current channel selection from UI variables */
+	active_model.channel_selection[0] = get_var_selection1();
+	active_model.channel_selection[1] = get_var_selection2();
+	active_model.channel_selection[2] = get_var_selection3();
+	active_model.channel_selection[3] = get_var_selection4();
+
 	int rc = model_store(active_model.ch, active_model.channel_selection);
 
 	if (rc == 0) {
@@ -429,10 +460,23 @@ void action_save_button_pressed(lv_event_t *e) {
 
 
 void action_load_device_list_changed(lv_event_t *e) {
-    char selected_model_name[MODEL_NAME_MAX];
-	lv_obj_t *dropb = lv_event_get_target_obj(e);
+	ARG_UNUSED(e);
+	char selected_model_name[MODEL_NAME_MAX] = {0};
+	size_t name_len;
 	int rc;
-	lv_dropdown_get_selected_str(dropb, selected_model_name, sizeof(selected_model_name));
+
+	if (objects.device_list == NULL) {
+		LOG_ERR("Device list is unavailable");
+		return;
+	}
+
+	lv_dropdown_get_selected_str(objects.device_list, selected_model_name,
+				     sizeof(selected_model_name));
+	name_len = strnlen(selected_model_name, sizeof(selected_model_name));
+	if (name_len == 0U || name_len >= sizeof(selected_model_name)) {
+		LOG_ERR("No valid device name is selected");
+		return;
+	}
 
 	rc = model_load(selected_model_name);
 	if (rc == 0) {
@@ -888,19 +932,11 @@ void action_update_init_bar(lv_event_t *e) {
 int main(void)
 {
 	const struct device *display_dev;
+	display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 
 	/* Initialize UI variables */
 	set_var_binding_led_color(0xFF0000); // Red color for binding status LED
 	set_var_load_bar_progress(1); // 1% progress at the start of initialization
-
-	/* Initialize file system & load active model */
-	if (model_init() != 0) {
-		LOG_ERR("model_init failed");
-		return -EIO;
-	}
-	set_var_load_bar_progress(10);
-
-	display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 
 	/* Check if the Display device is ready */
 	if (!device_is_ready(display_dev)) {
@@ -910,6 +946,13 @@ int main(void)
 
 	// Short delay to ensure everything is settled before starting the main loop
 	k_msleep(100);
+
+	/* Initialize file system & load active model */
+	if (model_init() != 0) {
+		LOG_ERR("model_init failed");
+		return -EIO;
+	}
+	set_var_load_bar_progress(10);
 
 	/* Initialize UI */
 	ui_init();

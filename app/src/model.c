@@ -152,7 +152,6 @@ int model_add(const char *name)
  */
 int model_load(const char *model_name)
 {
-    uint8_t channel_selection[MODEL_SELECTION_COUNT] = {ROULIS, TANGAGE, GAZ, LACET};
     int rc = model_fs_load_model(model_name, &active_model);
 
     if (rc != 0) {
@@ -161,13 +160,11 @@ int model_load(const char *model_name)
     }
     memcpy(active_model.name, model_name, MODEL_NAME_MAX);
 
-    memcpy(channel_selection,
-            active_model.channel_selection,
-            MODEL_SELECTION_COUNT * sizeof(active_model.channel_selection[0]));
-    set_var_selection1(channel_selection[0]);
-	set_var_selection2(channel_selection[1]);
-	set_var_selection3(channel_selection[2]);
-	set_var_selection4(channel_selection[3]);
+    /* Update UI variables with the loaded model's channel selection */
+    set_var_selection1(active_model.channel_selection[0]);
+	set_var_selection2(active_model.channel_selection[1]);
+	set_var_selection3(active_model.channel_selection[2]);
+	set_var_selection4(active_model.channel_selection[3]);
     active_model.used = true; // Ensure the slot is marked as used
     set_var_device_name(active_model.name);
 	
