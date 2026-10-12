@@ -35,6 +35,44 @@ UI_CHANNEL_TAB selection4;
 char device_name[MAX_DEVICE_NAME_LEN] = { 0 };
 char device_list[MAX_DEVICE_NAME_LEN*6] = { 0 };
 
+bool reverse1;
+bool reverse2;
+bool reverse3;
+bool reverse4;
+
+bool get_var_reverse1() {
+    return reverse1;
+}
+
+void set_var_reverse1(bool value) {
+    reverse1 = value;
+}
+
+bool get_var_reverse2() {
+    return reverse2;
+}
+
+void set_var_reverse2(bool value) {
+    reverse2 = value;
+}
+
+bool get_var_reverse3() {
+    return reverse3;
+}
+
+void set_var_reverse3(bool value) {
+    reverse3 = value;
+}
+
+
+bool get_var_reverse4() {
+    return reverse4;
+}
+
+void set_var_reverse4(bool value) {
+    reverse4 = value;
+}
+
 
 /*
 # get_var_sw1

@@ -38,7 +38,11 @@ enum FlowGlobalVariables {
     FLOW_GLOBAL_VARIABLE_SELECTION4 = 15,
     FLOW_GLOBAL_VARIABLE_BINDING_LED_COLOR = 16,
     FLOW_GLOBAL_VARIABLE_DEVICE_NAME = 17,
-    FLOW_GLOBAL_VARIABLE_DEVICE_LIST = 18
+    FLOW_GLOBAL_VARIABLE_DEVICE_LIST = 18,
+    FLOW_GLOBAL_VARIABLE_REVERSE1 = 19,
+    FLOW_GLOBAL_VARIABLE_REVERSE2 = 20,
+    FLOW_GLOBAL_VARIABLE_REVERSE3 = 21,
+    FLOW_GLOBAL_VARIABLE_REVERSE4 = 22
 };
 
 // Native global variables
@@ -81,6 +85,14 @@ extern const char *get_var_device_name();
 extern void set_var_device_name(const char *value);
 extern const char *get_var_device_list();
 extern void set_var_device_list(const char *value);
+extern bool get_var_reverse1();
+extern void set_var_reverse1(bool value);
+extern bool get_var_reverse2();
+extern void set_var_reverse2(bool value);
+extern bool get_var_reverse3();
+extern void set_var_reverse3(bool value);
+extern bool get_var_reverse4();
+extern void set_var_reverse4(bool value);
 
 #ifdef __cplusplus
 }

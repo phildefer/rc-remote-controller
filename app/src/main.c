@@ -259,8 +259,10 @@ int fill_radio_info(struct radio_info_t *info, const struct rf_settings *setting
 	set_var_ch2_int(info->tx_channel[index_lockup_table[get_var_selection2()]]);
 	set_var_ch3_int(info->tx_channel[index_lockup_table[get_var_selection3()]]);
 	set_var_ch4_int(info->tx_channel[index_lockup_table[get_var_selection4()]]);
-	set_var_ch5_int(info->tx_channel[index_lockup_table[AUX1]]);
-	set_var_ch6_int(info->tx_channel[index_lockup_table[AUX2]]);
+
+	// Todo: Ensure that AUX1 and AUX2 are correctly mapped to the appropriate channels
+	set_var_ch5_int(0);
+	set_var_ch6_int(0);
 
 	// Fill the aux_channels_bitmap
 	for (int j = 0; j < MAX_AUX_CHANNELS; j++) {
@@ -295,8 +297,10 @@ int initialize_rf_parameters(struct rf_settings *settings) {
 	}
 
 	/* active model shall be populated before calling this function */
-	memcpy(settings->ch_settings, active_model.ch, sizeof(active_model.ch));
-	
+	for (int i = 0; i < MAX_CHANNELS; i++) {
+		memcpy(&settings->ch_settings[i], &active_model.ch[i], sizeof(struct channel_map));
+	}
+
 	/* read changed pins value */
 	gpio_port_get_raw(pcf_dev, &changed_pins);
 
@@ -441,9 +445,13 @@ void action_save_button_pressed(lv_event_t *e) {
 
 	/* Retrieve the current channel selection from UI variables */
 	active_model.channel_selection[0] = get_var_selection1();
+	active_model.ch[active_model.channel_selection[0]].is_reversed = get_var_reverse1();
 	active_model.channel_selection[1] = get_var_selection2();
+	active_model.ch[active_model.channel_selection[1]].is_reversed = get_var_reverse2();
 	active_model.channel_selection[2] = get_var_selection3();
+	active_model.ch[active_model.channel_selection[2]].is_reversed = get_var_reverse3();
 	active_model.channel_selection[3] = get_var_selection4();
+	active_model.ch[active_model.channel_selection[3]].is_reversed = get_var_reverse4();
 
 	int rc = model_store(active_model.ch, active_model.channel_selection);
 

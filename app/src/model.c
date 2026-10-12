@@ -162,9 +162,13 @@ int model_load(const char *model_name)
 
     /* Update UI variables with the loaded model's channel selection */
     set_var_selection1(active_model.channel_selection[0]);
+    set_var_reverse1(active_model.ch[active_model.channel_selection[0]].is_reversed);
 	set_var_selection2(active_model.channel_selection[1]);
+	set_var_reverse2(active_model.ch[active_model.channel_selection[1]].is_reversed);
 	set_var_selection3(active_model.channel_selection[2]);
+	set_var_reverse3(active_model.ch[active_model.channel_selection[2]].is_reversed);
 	set_var_selection4(active_model.channel_selection[3]);
+	set_var_reverse4(active_model.ch[active_model.channel_selection[3]].is_reversed);
     active_model.used = true; // Ensure the slot is marked as used
     set_var_device_name(active_model.name);
 	
@@ -181,7 +185,9 @@ int model_store(const struct channel_map *map, const uint8_t *sel)
 {
     active_model.used = true; // Ensure the slot is marked as used
     memcpy(active_model.name, get_var_device_name(), MODEL_NAME_MAX);
-    memcpy(active_model.ch, map, sizeof(active_model.ch));
+    for (int i = 0; i < MAX_CHANNELS; i++) {
+        memcpy(&active_model.ch[i], &map[i], sizeof(struct channel_map));
+    }
     if (sel != NULL) {
         memcpy(active_model.channel_selection,
                sel,
