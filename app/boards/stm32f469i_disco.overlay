@@ -139,6 +139,9 @@
 
 };
 
+&ltdc {
+	display-controller = <&panel>;
+};
 
 &arduino_spi {
 	radio0: nrf24@0 {

@@ -17,7 +17,9 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/pwm.h>
+#include <zephyr/input/input.h>
 #include <zephyr/sys/__assert.h>
+#include <zephyr/sys/atomic.h>
 
 #include <lvgl.h>
 #include <lvgl_input_device.h>
@@ -29,11 +31,38 @@
 
 #include <vars.h>
 #include <ui.h>
+#include "display_services.h"
 #include "model.h"
 
 #define LOG_LEVEL CONFIG_LOG_DEFAULT_LEVEL
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(main, CONFIG_APP_LOG_LEVEL);
+
+static struct display_idle_service display_idle;
+static struct display_touch_wake_service display_touch_wake;
+static atomic_t display_services_ready;
+
+static void touchscreen_input_callback(struct input_event *event,
+				       void *user_data)
+{
+	int rc;
+
+	ARG_UNUSED(user_data);
+
+	if (!atomic_get(&display_services_ready) || event == NULL ||
+	    event->type != INPUT_EV_KEY || event->code != INPUT_BTN_TOUCH ||
+	    event->value == 0) {
+		return;
+	}
+
+	rc = display_touch_wake_service_on_touch(&display_touch_wake);
+	if (rc < 0 && rc != -EACCES) {
+		LOG_WRN("Touchscreen display wake handling failed (%d)", rc);
+	}
+}
+
+INPUT_CALLBACK_DEFINE(DEVICE_DT_GET(DT_CHOSEN(zephyr_touch)),
+		      touchscreen_input_callback, NULL);
 
 
 #if !DT_NODE_EXISTS(DT_NODELABEL(radio0))
@@ -317,10 +346,14 @@ int initialize_rf_parameters(struct rf_settings *settings) {
 	return 0; // Success
 }
 
+#define DT_SPEC_AND_COMMA_FOR_INPUTS(node_id, prop, idx) \
+	COND_CODE_1(DT_PHA_HAS_CELL_AT_IDX(node_id, prop, idx, input), \
+		    (ADC_DT_SPEC_GET_BY_IDX(node_id, idx),), ())
+
 /* Data of ADC io-channels specified in devicetree. */
 static const struct adc_dt_spec adc_channels[] = {
 	DT_FOREACH_PROP_ELEM(DT_PATH(zephyr_user), io_channels,
-			     DT_SPEC_AND_COMMA)
+			     DT_SPEC_AND_COMMA_FOR_INPUTS)
 };
 
 /**
@@ -940,6 +973,10 @@ void action_update_init_bar(lv_event_t *e) {
 int main(void)
 {
 	const struct device *display_dev;
+	int rc;
+
+	k_msleep(300); // Short delay to ensure everything is settled before starting the main loop
+
 	display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 
 	/* Initialize UI variables */
@@ -950,6 +987,18 @@ int main(void)
 	if (!device_is_ready(display_dev)) {
 		LOG_ERR("Device not ready, aborting test");
 		return -ENODEV;
+	}
+
+	rc = display_idle_service_init(&display_idle, display_dev,
+				       DISPLAY_IDLE_DEFAULT_TIMEOUT_MS);
+	if (rc < 0) {
+		LOG_ERR("Failed to initialize display idle service (%d)", rc);
+		return rc;
+	}
+	rc = display_touch_wake_service_init(&display_touch_wake, &display_idle);
+	if (rc < 0) {
+		LOG_ERR("Failed to initialize touchscreen wake service (%d)", rc);
+		return rc;
 	}
 
 	// Short delay to ensure everything is settled before starting the main loop
@@ -966,7 +1015,13 @@ int main(void)
 	ui_init();
 	lv_timer_handler();
 	display_blanking_off(display_dev);
-
+#if 0
+	rc = display_blanking_off(display_dev);
+	if (rc < 0) {
+		LOG_ERR("Failed to enable display panel (%d)", rc);
+		return rc;
+	}
+#endif
 	// Short delay to ensure everything is settled before starting the main loop
 	k_msleep(100);
 
@@ -1036,9 +1091,21 @@ int main(void)
 	ui_tick();
 	lv_timer_handler();
 
+	rc = display_idle_service_start(&display_idle);
+	if (rc < 0) {
+		LOG_ERR("Failed to start display idle service (%d)", rc);
+		return rc;
+	}
+	atomic_set(&display_services_ready, 1);
+
 	set_var_counter_int(0);
 
 	while (true) {
+		if (display_touch_wake_service_take_main_screen_request(
+			    &display_touch_wake)) {
+			loadScreen(SCREEN_ID_MAIN);
+		}
+
 		/* Update counter */
 		if (increment_counter) {
 			set_var_counter_int(get_var_counter_int() + 1);
