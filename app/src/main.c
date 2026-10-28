@@ -38,6 +38,45 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(main, CONFIG_APP_LOG_LEVEL);
 
+#if !DT_NODE_EXISTS(DT_NODELABEL(radio0))
+#error "whoops, node label radio0 not found"
+#endif
+
+
+#if !DT_NODE_EXISTS(DT_PATH(zephyr_user)) || \
+	!DT_NODE_HAS_PROP(DT_PATH(zephyr_user), io_channels)
+#error "No suitable devicetree overlay specified"
+#endif
+
+#define DT_SPEC_AND_COMMA(node_id, prop, idx) \
+	ADC_DT_SPEC_GET_BY_IDX(node_id, idx),
+
+/* Refresh rate configuration */
+#define REFRESH_RATE 33
+#define ADC_READ_INTERVAL_MS 100
+
+/* ----------- PCF8575 ----------- */
+#define PCF_NODE DT_NODELABEL(pcf8575)
+
+static const struct device *pcf_dev = DEVICE_DT_GET(PCF_NODE);
+static struct gpio_callback int_cb_data;
+
+/* ----------- MyButton (overlay label: MyButton) ----------- */
+static const struct gpio_dt_spec mybutton = GPIO_DT_SPEC_GET_OR(DT_NODELABEL(user_button), gpios, {0});
+static struct gpio_callback mybutton_cb;
+static struct k_work_delayable mybutton_work;
+
+/* ----------- Debounce ----------- */
+static struct k_work_delayable debounce_work;
+
+/* Radio information structure */
+struct radio_info_t {
+	uint8_t tx_channel[MAX_CHANNELS];
+	uint32_t aux_channels_bitmap;
+	uint32_t timestamp;	
+};
+
+/* display services variables and functions */
 static struct display_idle_service display_idle;
 static struct display_touch_wake_service display_touch_wake;
 static atomic_t display_services_ready;
@@ -63,81 +102,6 @@ static void touchscreen_input_callback(struct input_event *event,
 
 INPUT_CALLBACK_DEFINE(DEVICE_DT_GET(DT_CHOSEN(zephyr_touch)),
 		      touchscreen_input_callback, NULL);
-
-
-#if !DT_NODE_EXISTS(DT_NODELABEL(radio0))
-#error "whoops, node label radio0 not found"
-#endif
-
-
-#ifdef CONFIG_RESET_COUNTER_SW0
-static struct gpio_dt_spec button_gpio = GPIO_DT_SPEC_GET_OR(
-		DT_ALIAS(sw0), gpios, {0});
-static struct gpio_callback button_callback;
-
-/**
- * @brief Button interrupt service routine.
- *
- * This ISR handles the physical button press event and performs any
- * immediate processing required by the application.
- *
- * @param[in] port GPIO device that generated the interrupt.
- * @param[in] cb   GPIO callback data.
- * @param[in] pins Bitmask of pins that triggered the interrupt.
- */
-static void button_isr_callback(const struct device *port,
-				struct gpio_callback *cb,
-				uint32_t pins)
-{
-	ARG_UNUSED(port);
-	ARG_UNUSED(cb);
-	ARG_UNUSED(pins);
-
-	// count = 0;
-}
-#endif /* CONFIG_RESET_COUNTER_SW0 */
-
-#ifdef CONFIG_LV_Z_ENCODER_INPUT
-static const struct device *lvgl_encoder =
-	DEVICE_DT_GET(DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_lvgl_encoder_input));
-#endif /* CONFIG_LV_Z_ENCODER_INPUT */
-
-#ifdef CONFIG_LV_Z_KEYPAD_INPUT
-static const struct device *lvgl_keypad =
-	DEVICE_DT_GET(DT_COMPAT_GET_ANY_STATUS_OKAY(zephyr_lvgl_keypad_input));
-#endif /* CONFIG_LV_Z_KEYPAD_INPUT */
-
-
-#if !DT_NODE_EXISTS(DT_PATH(zephyr_user)) || \
-	!DT_NODE_HAS_PROP(DT_PATH(zephyr_user), io_channels)
-#error "No suitable devicetree overlay specified"
-#endif
-
-#define DT_SPEC_AND_COMMA(node_id, prop, idx) \
-	ADC_DT_SPEC_GET_BY_IDX(node_id, idx),
-
-/* ----------- PCF8575 ----------- */
-#define PCF_NODE DT_NODELABEL(pcf8575)
-
-static const struct device *pcf_dev = DEVICE_DT_GET(PCF_NODE);
-
-static struct gpio_callback int_cb_data;
-
-/* ----------- MyButton (overlay label: MyButton) ----------- */
-static const struct gpio_dt_spec mybutton = GPIO_DT_SPEC_GET_OR(DT_NODELABEL(user_button), gpios, {0});
-static struct gpio_callback mybutton_cb;
-static struct k_work_delayable mybutton_work;
-
-/* ----------- Debounce ----------- */
-
-static struct k_work_delayable debounce_work;
-
-/* Radio information structure */
-struct radio_info_t {
-	uint8_t tx_channel[MAX_CHANNELS];
-	uint32_t aux_channels_bitmap;
-	uint32_t timestamp;	
-};
 
 /* Radio fifo structure */
 struct radio_data_t {
@@ -233,15 +197,6 @@ static bool increment_counter = false;
 
 struct rf_settings rf_parameters;
 
-index_name_t index_lockup_table[MAX_CHANNELS] = {
-	LACET,    // default mapping for channel 1
-	GAZ,	  // default mapping for channel 2
-	TANGAGE,  // default mapping for channel 3
-	AUX1,	  // default mapping for channel 4
-	AUX2,     // default mapping for aux1 channel
-	ROULIS    // default mapping for aux2 channel
-};
-
 extern void set_var_ch1_int(int32_t value);
 extern void set_var_ch2_int(int32_t value);
 extern void set_var_ch3_int(int32_t value);
@@ -259,7 +214,7 @@ static const enum adc_action adc_callback(const struct device *dev,
  * @brief Populate radio transfer data from RF settings.
  *
  * Converts configured channel and auxiliary settings into a radio payload
- * structure and updates selected UI variables for the mapped channels.
+ * structure and updates the UI values for the fixed channel ordering.
  *
  * @param[out] info     Destination radio info structure.
  * @param[in]  settings Source RF settings including channel maps.
@@ -284,14 +239,12 @@ int fill_radio_info(struct radio_info_t *info, const struct rf_settings *setting
 			info->tx_channel[i] = 127; // Default to center if no mapping function
 		}
 	}
-	set_var_ch1_int(info->tx_channel[index_lockup_table[get_var_selection1()]]);
-	set_var_ch2_int(info->tx_channel[index_lockup_table[get_var_selection2()]]);
-	set_var_ch3_int(info->tx_channel[index_lockup_table[get_var_selection3()]]);
-	set_var_ch4_int(info->tx_channel[index_lockup_table[get_var_selection4()]]);
-
-	// Todo: Ensure that AUX1 and AUX2 are correctly mapped to the appropriate channels
-	set_var_ch5_int(0);
-	set_var_ch6_int(0);
+	set_var_ch1_int(info->tx_channel[ROULIS]);
+	set_var_ch2_int(info->tx_channel[TANGAGE]);
+	set_var_ch3_int(info->tx_channel[GAZ]);
+	set_var_ch4_int(info->tx_channel[LACET]);
+	set_var_ch5_int(info->tx_channel[AUX1]);
+	set_var_ch6_int(info->tx_channel[AUX2]);
 
 	// Fill the aux_channels_bitmap
 	for (int j = 0; j < MAX_AUX_CHANNELS; j++) {
@@ -476,17 +429,12 @@ void action_device_name_back_button_pressed(lv_event_t *e) {
 void action_save_button_pressed(lv_event_t *e) {
 	UNUSED(e);
 
-	/* Retrieve the current channel selection from UI variables */
-	active_model.channel_selection[0] = get_var_selection1();
-	active_model.ch[active_model.channel_selection[0]].is_reversed = get_var_reverse1();
-	active_model.channel_selection[1] = get_var_selection2();
-	active_model.ch[active_model.channel_selection[1]].is_reversed = get_var_reverse2();
-	active_model.channel_selection[2] = get_var_selection3();
-	active_model.ch[active_model.channel_selection[2]].is_reversed = get_var_reverse3();
-	active_model.channel_selection[3] = get_var_selection4();
-	active_model.ch[active_model.channel_selection[3]].is_reversed = get_var_reverse4();
+	active_model.ch[ROULIS].is_reversed = get_var_reverse1();
+	active_model.ch[TANGAGE].is_reversed = get_var_reverse2();
+	active_model.ch[GAZ].is_reversed = get_var_reverse3();
+	active_model.ch[LACET].is_reversed = get_var_reverse4();
 
-	int rc = model_store(active_model.ch, active_model.channel_selection);
+	int rc = model_store(active_model.ch);
 
 	if (rc == 0) {
 		LOG_INF("Model settings stored successfully");
@@ -720,7 +668,7 @@ void adc_read_thread(void)
 		/* buffer size in bytes, not number of samples */
 		.buffer_size = sizeof(buf),
 		.options = &adc_options,
-		.channels = 0xf210, /* 0b1111001000010000, adc channels bitmask */
+		.channels = 0,
 	};
 
 	/* Configure channels individually prior to sampling. */
@@ -745,8 +693,10 @@ void adc_read_thread(void)
 		return;
 	}
 
-	/* Re-set multiple channel config, rewritten by sequence_init */
-	sequence.channels = 0xf210; /* 0b1111001000010000, adc channels bitmask */
+	/* Include all configured ADC inputs in the sequence. */
+	for (size_t i = 0U; i < ARRAY_SIZE(adc_channels); i++) {
+		sequence.channels |= BIT(adc_channels[i].channel_id);
+	}
 
 	set_var_load_bar_progress(get_var_load_bar_progress() + 20);
 
@@ -758,10 +708,17 @@ void adc_read_thread(void)
 			continue;
 		}
 		else {
-			/* Process ADC samples stored in buf */
-			for (uint8_t c = 0; c < ARRAY_SIZE(adc_channels); c++) {
-				// printk("Channel %d Sample: %d", c, ((int16_t *)sequence.buffer)[c * (sequence.options->extra_samplings + 1)]);
-				rf_parameters.ch_settings[c].input = ((uint16_t *)sequence.buffer)[c * (sequence.options->extra_samplings + 1)];
+			/* ADC results are ordered by channel ID; model channels follow DTS order. */
+			for (size_t c = 0U; c < ARRAY_SIZE(adc_channels); c++) {
+				size_t sample_index = 0U;
+
+				for (size_t i = 0U; i < ARRAY_SIZE(adc_channels); i++) {
+					if (adc_channels[i].channel_id < adc_channels[c].channel_id) {
+						sample_index++;
+					}
+				}
+				rf_parameters.ch_settings[c].input =
+					buf[sample_index * (sequence.options->extra_samplings + 1U)];
 			}
 		}
 		/* Fill radio info and put it in the FIFO for transmission */
@@ -771,7 +728,7 @@ void adc_read_thread(void)
 		k_fifo_put(&radio_fifo, &radio_data);
 
 		/* Sleep for a while before the next read */
-		k_msleep(30);
+		k_msleep(ADC_READ_INTERVAL_MS);
 	}
 }
 
@@ -1014,14 +971,12 @@ int main(void)
 	/* Initialize UI */
 	ui_init();
 	lv_timer_handler();
-	display_blanking_off(display_dev);
-#if 0
+
 	rc = display_blanking_off(display_dev);
 	if (rc < 0) {
 		LOG_ERR("Failed to enable display panel (%d)", rc);
 		return rc;
 	}
-#endif
 	// Short delay to ensure everything is settled before starting the main loop
 	k_msleep(100);
 
@@ -1068,6 +1023,7 @@ int main(void)
 	// Short delay to ensure everything is settled before starting the main loop
 	k_msleep(500);
 	
+	/* Wait for adc & rf threads to complete */
 	while(get_var_load_bar_progress() <= 80) {
 		/* Update UI */
 		ui_tick();
@@ -1115,7 +1071,7 @@ int main(void)
 		ui_tick();
 		lv_timer_handler();
 
-		k_sleep(K_MSEC(20));
+		k_sleep(K_MSEC(REFRESH_RATE)); /* ~30 FPS */
 	}
 	return 0;
 }

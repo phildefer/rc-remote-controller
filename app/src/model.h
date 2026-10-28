@@ -26,10 +26,6 @@ extern "C" {
 #define MODEL_NAME_MAX 32
 #endif
 
-#ifndef MODEL_SELECTION_COUNT
-#define MODEL_SELECTION_COUNT 4
-#endif
-
 /* Channel mapping function type and structure
  * These match the application's channel mapping concept and allow
  * models to store per-channel mapping settings directly.
@@ -55,7 +51,6 @@ typedef struct {
     bool used;                          /* slot in use */
     char name[MODEL_NAME_MAX];          /* NUL-terminated name */
     struct channel_map ch[MAX_CHANNELS];              /* channel mapping data */
-    uint8_t channel_selection[MODEL_SELECTION_COUNT]; /* ch1..ch4 selected source channel */
 } model_t;
 
 /* The persistent model list is placed in a dedicated linker section.
@@ -82,10 +77,10 @@ int model_init(void);
  */
 int model_add(const char *name);
 
-/* Store active model in persistent Storage. 
+/* Store active model in persistent storage.
  * Returns 0 on success, error code on error
  */
-int model_store(const struct channel_map *map, const uint8_t *sel);
+int model_store(const struct channel_map *map);
 
 /* Remove a model based on its name. 
  * Returns 0 on success, error code on error.

@@ -48,11 +48,6 @@ static int model_create(const char *name)
         new_model.ch[j].map = def_map;
     }
             
-    /* Default CH1..CH4 selections: ROULIS, TANGAGE, GAZ, LACET. */
-    new_model.channel_selection[0] = ROULIS;
-    new_model.channel_selection[1] = TANGAGE;
-    new_model.channel_selection[2] = GAZ;
-    new_model.channel_selection[3] = LACET;
     new_model.used = true;
     strncpy(new_model.name, name, MODEL_NAME_MAX - 1);
     new_model.name[MODEL_NAME_MAX - 1] = '\0';
@@ -160,15 +155,10 @@ int model_load(const char *model_name)
     }
     memcpy(active_model.name, model_name, MODEL_NAME_MAX);
 
-    /* Update UI variables with the loaded model's channel selection */
-    set_var_selection1(active_model.channel_selection[0]);
-    set_var_reverse1(active_model.ch[active_model.channel_selection[0]].is_reversed);
-	set_var_selection2(active_model.channel_selection[1]);
-	set_var_reverse2(active_model.ch[active_model.channel_selection[1]].is_reversed);
-	set_var_selection3(active_model.channel_selection[2]);
-	set_var_reverse3(active_model.ch[active_model.channel_selection[2]].is_reversed);
-	set_var_selection4(active_model.channel_selection[3]);
-	set_var_reverse4(active_model.ch[active_model.channel_selection[3]].is_reversed);
+    set_var_reverse1(active_model.ch[ROULIS].is_reversed);
+	set_var_reverse2(active_model.ch[TANGAGE].is_reversed);
+	set_var_reverse3(active_model.ch[GAZ].is_reversed);
+	set_var_reverse4(active_model.ch[LACET].is_reversed);
     active_model.used = true; // Ensure the slot is marked as used
     set_var_device_name(active_model.name);
 	
@@ -178,20 +168,15 @@ int model_load(const char *model_name)
 /**
  * @brief Save channel map data into an existing model slot.
  *
- * @param data Pointer to channel map data.
+ * @param map Pointer to channel map data.
  * @return 0 on success, error code on failure.
  */
-int model_store(const struct channel_map *map, const uint8_t *sel)
+int model_store(const struct channel_map *map)
 {
     active_model.used = true; // Ensure the slot is marked as used
     memcpy(active_model.name, get_var_device_name(), MODEL_NAME_MAX);
     for (int i = 0; i < MAX_CHANNELS; i++) {
         memcpy(&active_model.ch[i], &map[i], sizeof(struct channel_map));
-    }
-    if (sel != NULL) {
-        memcpy(active_model.channel_selection,
-               sel,
-               MODEL_SELECTION_COUNT * sizeof(active_model.channel_selection[0]));
     }
     /* Save the model to persistent storage */
     return model_fs_save_model(active_model.name, &active_model);
@@ -247,7 +232,7 @@ int model_remove(char *model_name)
             /* No other models exist, create a default model */
             LOG_INF("No other models found, creating default model");
             model_create("Default Model");
-            rc = model_store(new_model.ch, new_model.channel_selection);
+            rc = model_store(new_model.ch);
             set_var_device_list("");
             if (rc != 0) {
                 LOG_ERR("Failed to save default model: %d", rc);
@@ -266,4 +251,3 @@ int model_remove(char *model_name)
     }
     return rc; // Success
 }
-

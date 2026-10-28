@@ -20,7 +20,8 @@
 LOG_MODULE_REGISTER(model_fs, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define MODEL_FS_MAGIC 0x52434D44u /* "RCMD" */
-#define MODEL_FS_VERSION 1u
+#define MODEL_FS_VERSION 2u
+#define MODEL_FS_LEGACY_VERSION 1u
 
 #define MODEL_FS_MOUNT_POINT "/lfs"
 #define MODEL_FS_MODELS_DIR MODEL_FS_MOUNT_POINT "/models"
@@ -40,7 +41,6 @@ struct model_blob {
 	uint32_t version;
 	char name[MODEL_FS_MODEL_NAME_LEN];
 	struct model_channel_blob ch[MAX_CHANNELS];
-	uint8_t channel_selection[MODEL_SELECTION_COUNT];
 };
 
 FS_LITTLEFS_DECLARE_DEFAULT_CONFIG(storage_lfs);
@@ -70,10 +70,6 @@ static void model_to_blob(const model_t *model, struct model_blob *blob)
 		blob->ch[i].input = model->ch[i].input;
 		blob->ch[i].is_reversed = model->ch[i].is_reversed ? 1u : 0u;
 	}
-
-	memcpy(blob->channel_selection,
-	       model->channel_selection,
-	       sizeof(blob->channel_selection));
 }
 
 static void blob_to_model(const struct model_blob *blob, model_t *model)
@@ -92,10 +88,6 @@ static void blob_to_model(const struct model_blob *blob, model_t *model)
 		model->ch[i].is_reversed = blob->ch[i].is_reversed ? true : false;
 		model->ch[i].map = def_map;
 	}
-
-	memcpy(model->channel_selection,
-	       blob->channel_selection,
-	       sizeof(model->channel_selection));
 }
 
 static int validate_model_name(const char *name)
@@ -297,7 +289,9 @@ int model_fs_load_model(const char *name, model_t *model)
 		return rc;
 	}
 
-	if (blob.magic != MODEL_FS_MAGIC || blob.version != MODEL_FS_VERSION ||
+	if (blob.magic != MODEL_FS_MAGIC ||
+	    (blob.version != MODEL_FS_VERSION &&
+	     blob.version != MODEL_FS_LEGACY_VERSION) ||
 	    validate_model_name(blob.name) != 0 || strcmp(blob.name, name) != 0) {
 		LOG_ERR("Invalid model blob in %s", path);
 		return -EIO;
