@@ -7,6 +7,7 @@
 #include <string.h>
 #include "vars.h"
 #include "../src/model_fs.h"
+// #include "../src/platform.h"
 
 #define MAX_STR_LEN 8
 #define MAX_DEVICE_NAME_LEN 20
@@ -20,18 +21,12 @@ bool sw6;
 
 int32_t binding_led_color;
 
-int32_t counter = 0;
 int32_t ch1 = 0;
 int32_t ch2 = 0;
 int32_t ch3 = 0;
 int32_t ch4 = 0;
 int32_t ch5 = 0;
 int32_t ch6 = 0;
-UI_CHANNEL_TAB selection1;
-UI_CHANNEL_TAB selection2;
-UI_CHANNEL_TAB selection3;
-UI_CHANNEL_TAB selection4;
-
 char device_name[MAX_DEVICE_NAME_LEN] = { 0 };
 char device_list[MAX_DEVICE_NAME_LEN*6] = { 0 };
 
@@ -39,6 +34,22 @@ bool reverse1;
 bool reverse2;
 bool reverse3;
 bool reverse4;
+
+int32_t ch1_min;
+int32_t ch2_min;
+int32_t ch3_min;
+int32_t ch4_min;
+
+static int32_t clamp_min_percentage(int32_t percentage)
+{
+    if (percentage < 0) {
+        return 0;
+    }
+    if (percentage > 100) {
+        return 100;
+    }
+    return percentage;
+}
 
 bool get_var_reverse1() {
     return reverse1;
@@ -198,105 +209,6 @@ void set_var_sw6(bool value) {
     sw6 = value;
 }
 
-/*
-# get_var_selection1
-
-Returns the current value of selection1.
-
-@return UI_CHANNEL_TAB The current selection.
-*/
-UI_CHANNEL_TAB get_var_selection1() {
-    return selection1;
-}
-
-/*
-# set_var_selection1
-
-Sets the value of selection1.
-
-@param value The new value for selection1.
-*/
-void set_var_selection1(UI_CHANNEL_TAB value) {
-    selection1 = value;
-}
-
-/*
-# get_var_selection2
-
-Returns the current value of selection2.
-
-@return UI_CHANNEL_TAB The current selection.
-*/
-UI_CHANNEL_TAB get_var_selection2() {
-    return selection2;
-}
-
-/*
-# set_var_selection2
-
-Sets the value of selection2.
-
-@param value The new value for selection2.
-*/
-void set_var_selection2(UI_CHANNEL_TAB value) {
-    selection2 = value;
-}
-
-/*
-# get_var_selection3
-
-Returns the current value of selection3.
-
-@return UI_CHANNEL_TAB The current selection.
-*/
-UI_CHANNEL_TAB get_var_selection3() {
-    return selection3;
-}
-
-/*
-# set_var_selection3
-
-Sets the value of selection3.
-
-@param value The new value for selection3.
-*/
-void set_var_selection3(UI_CHANNEL_TAB value) {
-    selection3 = value;
-}
-
-/*
-# get_var_selection4
-
-Returns the current value of selection4.
-
-@return UI_CHANNEL_TAB The current selection.
-*/
-UI_CHANNEL_TAB get_var_selection4() {
-    return selection4;
-}
-
-/*
-# set_var_selection4
-
-Sets the value of selection4.
-
-@param value The new value for selection4.
-*/
-void set_var_selection4(UI_CHANNEL_TAB value) {
-    selection4 = value;
-}
-
-/*
-# get_var_counter
-
-Returns the current value of counter as a string.
-
-@return const char* The string representation of counter.
-*/
-const char *get_var_counter() {
-	static char str_buf[MAX_STR_LEN];
-	snprintf(str_buf, sizeof(str_buf), "%d", counter);
-	return (const char *) str_buf;}
 
 /*
 # get_var_ch1
@@ -378,25 +290,6 @@ const char *get_var_ch6() {
 	return (const char *) str_buf;
 }
 
-/*
-# get_var_counter_int
-
-Returns the current integer value of counter.
-
-@return int32_t The value of counter.
-*/
-int32_t get_var_counter_int(void)
-{
-    return counter;
-}
-/*
-# set_var_counter
-
-Sets the value of counter from a string. Currently not implemented.
-
-@param value The string value to set (ignored).
-*/
-void set_var_counter(const char *value) {}
 /*
 # set_var_ch1
 
@@ -494,14 +387,6 @@ Sets the integer value of ch6.
 @param value The new integer value for ch6.
 */
 void set_var_ch6_int(int32_t value) {ch6 = value;}
-/*
-# set_var_counter_int
-
-Sets the integer value of counter.
-
-@param value The new integer value for counter.
-*/
-void set_var_counter_int(int32_t value) {counter = value;}
 
 int32_t load_bar_progress;
 
@@ -561,4 +446,36 @@ const char *get_var_device_name() {
 void set_var_device_name(const char *value) {
     strncpy(device_name, value, sizeof(device_name) / sizeof(char));
     device_name[sizeof(device_name) / sizeof(char) - 1] = 0;
+}
+
+int32_t get_var_ch1_min() {
+    return ch1_min;
+}
+
+void set_var_ch1_min(int32_t value) {
+    ch1_min = clamp_min_percentage(value);
+}
+
+int32_t get_var_ch2_min() {
+    return ch2_min;
+}
+
+void set_var_ch2_min(int32_t value) {
+    ch2_min = clamp_min_percentage(value);
+}
+
+int32_t get_var_ch3_min() {
+    return ch3_min;
+}
+
+void set_var_ch3_min(int32_t value) {
+    ch3_min = clamp_min_percentage(value);
+}
+
+int32_t get_var_ch4_min() {
+    return ch4_min;
+}
+
+void set_var_ch4_min(int32_t value) {
+    ch4_min = clamp_min_percentage(value);
 }

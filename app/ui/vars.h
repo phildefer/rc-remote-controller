@@ -10,45 +10,35 @@ extern "C" {
 
 // enum declarations
 
-typedef enum {
-    UI_CHANNEL_TAB_Roulis = 0,
-    UI_CHANNEL_TAB_Tangage = 1,
-    UI_CHANNEL_TAB_Gaz = 2,
-    UI_CHANNEL_TAB_Lacet = 3
-} UI_CHANNEL_TAB;
-
 // Flow global variables
 
 enum FlowGlobalVariables {
-    FLOW_GLOBAL_VARIABLE_COUNTER = 0,
-    FLOW_GLOBAL_VARIABLE_CH1 = 1,
-    FLOW_GLOBAL_VARIABLE_CH2 = 2,
-    FLOW_GLOBAL_VARIABLE_CH3 = 3,
-    FLOW_GLOBAL_VARIABLE_CH4 = 4,
-    FLOW_GLOBAL_VARIABLE_CH5 = 5,
-    FLOW_GLOBAL_VARIABLE_CH6 = 6,
-    FLOW_GLOBAL_VARIABLE_SELECTION1 = 7,
-    FLOW_GLOBAL_VARIABLE_SW1 = 8,
-    FLOW_GLOBAL_VARIABLE_SW2 = 9,
-    FLOW_GLOBAL_VARIABLE_SW3 = 10,
-    FLOW_GLOBAL_VARIABLE_SW4 = 11,
-    FLOW_GLOBAL_VARIABLE_LOAD_BAR_PROGRESS = 12,
-    FLOW_GLOBAL_VARIABLE_SELECTION2 = 13,
-    FLOW_GLOBAL_VARIABLE_SELECTION3 = 14,
-    FLOW_GLOBAL_VARIABLE_SELECTION4 = 15,
-    FLOW_GLOBAL_VARIABLE_BINDING_LED_COLOR = 16,
-    FLOW_GLOBAL_VARIABLE_DEVICE_NAME = 17,
-    FLOW_GLOBAL_VARIABLE_DEVICE_LIST = 18,
-    FLOW_GLOBAL_VARIABLE_REVERSE1 = 19,
-    FLOW_GLOBAL_VARIABLE_REVERSE2 = 20,
-    FLOW_GLOBAL_VARIABLE_REVERSE3 = 21,
-    FLOW_GLOBAL_VARIABLE_REVERSE4 = 22
+    FLOW_GLOBAL_VARIABLE_CH1 = 0,
+    FLOW_GLOBAL_VARIABLE_CH2 = 1,
+    FLOW_GLOBAL_VARIABLE_CH3 = 2,
+    FLOW_GLOBAL_VARIABLE_CH4 = 3,
+    FLOW_GLOBAL_VARIABLE_CH5 = 4,
+    FLOW_GLOBAL_VARIABLE_CH6 = 5,
+    FLOW_GLOBAL_VARIABLE_SW1 = 6,
+    FLOW_GLOBAL_VARIABLE_SW2 = 7,
+    FLOW_GLOBAL_VARIABLE_SW3 = 8,
+    FLOW_GLOBAL_VARIABLE_SW4 = 9,
+    FLOW_GLOBAL_VARIABLE_LOAD_BAR_PROGRESS = 10,
+    FLOW_GLOBAL_VARIABLE_BINDING_LED_COLOR = 11,
+    FLOW_GLOBAL_VARIABLE_DEVICE_NAME = 12,
+    FLOW_GLOBAL_VARIABLE_DEVICE_LIST = 13,
+    FLOW_GLOBAL_VARIABLE_REVERSE1 = 14,
+    FLOW_GLOBAL_VARIABLE_REVERSE2 = 15,
+    FLOW_GLOBAL_VARIABLE_REVERSE3 = 16,
+    FLOW_GLOBAL_VARIABLE_REVERSE4 = 17,
+    FLOW_GLOBAL_VARIABLE_CH1_MIN = 18,
+    FLOW_GLOBAL_VARIABLE_CH2_MIN = 19,
+    FLOW_GLOBAL_VARIABLE_CH3_MIN = 20,
+    FLOW_GLOBAL_VARIABLE_CH4_MIN = 21
 };
 
 // Native global variables
 
-extern const char *get_var_counter();
-extern void set_var_counter(const char *value);
 extern const char *get_var_ch1();
 extern void set_var_ch1(const char *value);
 extern const char *get_var_ch2();
@@ -61,8 +51,6 @@ extern const char *get_var_ch5();
 extern void set_var_ch5(const char *value);
 extern const char *get_var_ch6();
 extern void set_var_ch6(const char *value);
-extern UI_CHANNEL_TAB get_var_selection1();
-extern void set_var_selection1(UI_CHANNEL_TAB value);
 extern bool get_var_sw1();
 extern void set_var_sw1(bool value);
 extern bool get_var_sw2();
@@ -73,12 +61,6 @@ extern bool get_var_sw4();
 extern void set_var_sw4(bool value);
 extern int32_t get_var_load_bar_progress();
 extern void set_var_load_bar_progress(int32_t value);
-extern UI_CHANNEL_TAB get_var_selection2();
-extern void set_var_selection2(UI_CHANNEL_TAB value);
-extern UI_CHANNEL_TAB get_var_selection3();
-extern void set_var_selection3(UI_CHANNEL_TAB value);
-extern UI_CHANNEL_TAB get_var_selection4();
-extern void set_var_selection4(UI_CHANNEL_TAB value);
 extern int32_t get_var_binding_led_color();
 extern void set_var_binding_led_color(int32_t value);
 extern const char *get_var_device_name();
@@ -93,6 +75,14 @@ extern bool get_var_reverse3();
 extern void set_var_reverse3(bool value);
 extern bool get_var_reverse4();
 extern void set_var_reverse4(bool value);
+extern int32_t get_var_ch1_min();
+extern void set_var_ch1_min(int32_t value);
+extern int32_t get_var_ch2_min();
+extern void set_var_ch2_min(int32_t value);
+extern int32_t get_var_ch3_min();
+extern void set_var_ch3_min(int32_t value);
+extern int32_t get_var_ch4_min();
+extern void set_var_ch4_min(int32_t value);
 
 #ifdef __cplusplus
 }

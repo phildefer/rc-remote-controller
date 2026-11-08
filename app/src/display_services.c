@@ -151,15 +151,12 @@ int display_touch_wake_service_on_touch(
 	}
 
 	if (idle_service->state == DISPLAY_IDLE_STATE_OFF) {
-		display_blanking_off(idle_service->display);	
-#if 0
 		rc = display_blanking_off(idle_service->display);
 		if (rc < 0) {
 			LOG_ERR("Failed to restore display (%d)", rc);
 			k_mutex_unlock(&idle_service->lock);
 			return rc;
 		}
-#endif
 		idle_service->state = DISPLAY_IDLE_STATE_ON;
 		service->main_screen_requested = true;
 		LOG_INF("Touchscreen restored display panel");

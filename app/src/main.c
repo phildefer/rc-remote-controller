@@ -429,11 +429,6 @@ void action_device_name_back_button_pressed(lv_event_t *e) {
 void action_save_button_pressed(lv_event_t *e) {
 	UNUSED(e);
 
-	active_model.ch[ROULIS].is_reversed = get_var_reverse1();
-	active_model.ch[TANGAGE].is_reversed = get_var_reverse2();
-	active_model.ch[GAZ].is_reversed = get_var_reverse3();
-	active_model.ch[LACET].is_reversed = get_var_reverse4();
-
 	int rc = model_store(active_model.ch);
 
 	if (rc == 0) {
@@ -1054,7 +1049,7 @@ int main(void)
 	}
 	atomic_set(&display_services_ready, 1);
 
-	set_var_counter_int(0);
+	// set_var_counter_int(0);
 
 	while (true) {
 		if (display_touch_wake_service_take_main_screen_request(
@@ -1064,7 +1059,8 @@ int main(void)
 
 		/* Update counter */
 		if (increment_counter) {
-			set_var_counter_int(get_var_counter_int() + 1);
+			// for tests purposes only
+			// set_var_counter_int(get_var_counter_int() + 1);
 		}
 
 		/* Update UI */

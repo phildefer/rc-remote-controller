@@ -27,6 +27,35 @@ model_t active_model;
 
 static model_t new_model;
 
+#define MODEL_MIN_ADC_SPAN 127
+
+static int32_t model_min_to_percentage(uint16_t min)
+{
+    int32_t span = MODEL_MIN_ADC_SPAN;
+    int32_t percentage =
+        ((CALIBRATION_OFFSET + span - (int32_t)min) * 100) / span;
+
+    if (percentage < 0) {
+        return 0;
+    }
+    if (percentage > 100) {
+        return 100;
+    }
+    return percentage;
+}
+
+static uint16_t model_percentage_to_min(int32_t percentage)
+{
+    if (percentage < 0) {
+        percentage = 0;
+    } else if (percentage > 100) {
+        percentage = 100;
+    }
+
+    return CALIBRATION_OFFSET +
+           ((100 - percentage) * MODEL_MIN_ADC_SPAN) / 100;
+}
+
 /**
  * @brief Create a new model with default settings.
  *
@@ -161,6 +190,10 @@ int model_load(const char *model_name)
 	set_var_reverse4(active_model.ch[LACET].is_reversed);
     active_model.used = true; // Ensure the slot is marked as used
     set_var_device_name(active_model.name);
+    set_var_ch1_min(model_min_to_percentage(active_model.ch[ROULIS].min));
+    set_var_ch2_min(model_min_to_percentage(active_model.ch[TANGAGE].min));
+    set_var_ch3_min(model_min_to_percentage(active_model.ch[GAZ].min));
+    set_var_ch4_min(model_min_to_percentage(active_model.ch[LACET].min));
 	
 	return rc;
 }
@@ -178,6 +211,17 @@ int model_store(const struct channel_map *map)
     for (int i = 0; i < MAX_CHANNELS; i++) {
         memcpy(&active_model.ch[i], &map[i], sizeof(struct channel_map));
     }
+
+    active_model.ch[ROULIS].is_reversed = get_var_reverse1();
+	active_model.ch[TANGAGE].is_reversed = get_var_reverse2();
+	active_model.ch[GAZ].is_reversed = get_var_reverse3();
+	active_model.ch[LACET].is_reversed = get_var_reverse4();
+
+    active_model.ch[ROULIS].min = model_percentage_to_min(get_var_ch1_min());
+    active_model.ch[TANGAGE].min = model_percentage_to_min(get_var_ch2_min());
+    active_model.ch[GAZ].min = model_percentage_to_min(get_var_ch3_min());
+    active_model.ch[LACET].min = model_percentage_to_min(get_var_ch4_min());
+
     /* Save the model to persistent storage */
     return model_fs_save_model(active_model.name, &active_model);
 }
@@ -232,6 +276,10 @@ int model_remove(char *model_name)
             /* No other models exist, create a default model */
             LOG_INF("No other models found, creating default model");
             model_create("Default Model");
+            set_var_ch1_min(100);
+            set_var_ch2_min(100);
+            set_var_ch3_min(100);
+            set_var_ch4_min(100);
             rc = model_store(new_model.ch);
             set_var_device_list("");
             if (rc != 0) {
