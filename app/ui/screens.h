@@ -49,11 +49,10 @@ typedef struct _objects_t {
     lv_obj_t *reverse2_switch;
     lv_obj_t *reverse3_switch;
     lv_obj_t *reverse4_switch;
-    lv_obj_t *ch1_min_slider;
     lv_obj_t *lab_text_min;
-    lv_obj_t *ch2_min_slider;
-    lv_obj_t *ch3_min_slider;
-    lv_obj_t *ch4_min_slider;
+    lv_obj_t *but_ch1_min_minus;
+    lv_obj_t *but_ch1_min_plus;
+    lv_obj_t *spin_ch1_min;
     lv_obj_t *device;
     lv_obj_t *device_list;
     lv_obj_t *load_device_label;

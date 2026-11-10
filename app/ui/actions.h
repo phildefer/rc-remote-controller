@@ -17,6 +17,8 @@ extern void action_delete_device(lv_event_t * e);
 extern void action_device_name_ok_button_pressed(lv_event_t * e);
 extern void action_device_name_back_button_pressed(lv_event_t * e);
 extern void action_load_device_list_changed(lv_event_t * e);
+extern void action_ch1_min_spin_decrement(lv_event_t * e);
+extern void action_ch1_min_spin_increment(lv_event_t * e);
 
 #ifdef __cplusplus
 }

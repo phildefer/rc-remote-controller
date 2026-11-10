@@ -5,9 +5,11 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <lvgl.h>
 #include "vars.h"
+#include "screens.h"
+#include "actions.h"
 #include "../src/model_fs.h"
-// #include "../src/platform.h"
 
 #define MAX_STR_LEN 8
 #define MAX_DEVICE_NAME_LEN 20
@@ -39,6 +41,8 @@ int32_t ch1_min;
 int32_t ch2_min;
 int32_t ch3_min;
 int32_t ch4_min;
+
+extern objects_t objects;
 
 static int32_t clamp_min_percentage(int32_t percentage)
 {
@@ -447,6 +451,27 @@ void set_var_device_name(const char *value) {
     strncpy(device_name, value, sizeof(device_name) / sizeof(char));
     device_name[sizeof(device_name) / sizeof(char) - 1] = 0;
 }
+
+
+void action_ch1_min_spin_decrement(lv_event_t *e) {
+
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_spinbox_decrement(objects.spin_ch1_min);
+    }
+}
+
+
+void action_ch1_min_spin_increment(lv_event_t *e) {
+    // TODO: Implement action ch1_min_spin_increment here
+
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_spinbox_increment(objects.spin_ch1_min);
+    }
+}
+
+
 
 int32_t get_var_ch1_min() {
     return ch1_min;
