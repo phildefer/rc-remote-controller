@@ -309,6 +309,21 @@ static const struct adc_dt_spec adc_channels[] = {
 			     DT_SPEC_AND_COMMA_FOR_INPUTS)
 };
 
+struct adc_input_mapping {
+	uint8_t adc_channel_id;
+	index_name_t input_index;
+};
+
+/* ADC samples are returned in ascending ADC channel-ID order. */
+static const struct adc_input_mapping adc_input_map[] = {
+	{ 4, AUX2 },
+	{ 9, GAZ },
+	{ 12, TANGAGE },
+	{ 13, ROULIS },
+	{ 14, LACET },
+	{ 15, AUX1 },
+};
+
 /**
  * @brief Handle the start/stop button press event.
  *
@@ -666,6 +681,29 @@ void adc_read_thread(void)
 		.channels = 0,
 	};
 
+	if (ARRAY_SIZE(adc_input_map) != ARRAY_SIZE(adc_channels)) {
+		printk("ADC mapping has %zu entries, but devicetree configures %zu channels\n",
+		       ARRAY_SIZE(adc_input_map), ARRAY_SIZE(adc_channels));
+		return;
+	}
+
+	for (size_t i = 0U; i < ARRAY_SIZE(adc_input_map); i++) {
+		bool channel_configured = false;
+
+		for (size_t j = 0U; j < ARRAY_SIZE(adc_channels); j++) {
+			if (adc_channels[j].channel_id == adc_input_map[i].adc_channel_id) {
+				channel_configured = true;
+				break;
+			}
+		}
+
+		if (!channel_configured) {
+			printk("ADC channel %u from static input mapping is not configured\n",
+			       adc_input_map[i].adc_channel_id);
+			return;
+		}
+	}
+
 	/* Configure channels individually prior to sampling. */
 	for (size_t i = 0U; i < ARRAY_SIZE(adc_channels); i++) {
 		if (!adc_is_ready_dt(&adc_channels[i])) {
@@ -703,17 +741,9 @@ void adc_read_thread(void)
 			continue;
 		}
 		else {
-			/* ADC results are ordered by channel ID; model channels follow DTS order. */
-			for (size_t c = 0U; c < ARRAY_SIZE(adc_channels); c++) {
-				size_t sample_index = 0U;
-
-				for (size_t i = 0U; i < ARRAY_SIZE(adc_channels); i++) {
-					if (adc_channels[i].channel_id < adc_channels[c].channel_id) {
-						sample_index++;
-					}
-				}
-				rf_parameters.ch_settings[c].input =
-					buf[sample_index * (sequence.options->extra_samplings + 1U)];
+			for (size_t i = 0U; i < ARRAY_SIZE(adc_input_map); i++) {
+				rf_parameters.ch_settings[adc_input_map[i].input_index].input =
+					buf[i * (sequence.options->extra_samplings + 1U)];
 			}
 		}
 		/* Fill radio info and put it in the FIFO for transmission */
