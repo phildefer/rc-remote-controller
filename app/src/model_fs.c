@@ -20,7 +20,7 @@
 LOG_MODULE_REGISTER(model_fs, CONFIG_LOG_DEFAULT_LEVEL);
 
 #define MODEL_FS_MAGIC 0x52434D44u /* "RCMD" */
-#define MODEL_FS_VERSION 2u
+#define MODEL_FS_VERSION 3u
 #define MODEL_FS_LEGACY_VERSION 1u
 
 #define MODEL_FS_MOUNT_POINT "/lfs"
@@ -33,6 +33,8 @@ struct model_channel_blob {
 	uint16_t max;
 	uint16_t center;
 	uint16_t input;
+	uint8_t min_end_point;
+	uint8_t max_end_point;
 	uint8_t is_reversed;
 };
 
@@ -68,6 +70,8 @@ static void model_to_blob(const model_t *model, struct model_blob *blob)
 		blob->ch[i].max = model->ch[i].max;
 		blob->ch[i].center = model->ch[i].center;
 		blob->ch[i].input = model->ch[i].input;
+		blob->ch[i].min_end_point = model->ch[i].min_end_point;
+		blob->ch[i].max_end_point = model->ch[i].max_end_point;
 		blob->ch[i].is_reversed = model->ch[i].is_reversed ? 1u : 0u;
 	}
 }
@@ -85,6 +89,8 @@ static void blob_to_model(const struct model_blob *blob, model_t *model)
 		model->ch[i].max = blob->ch[i].max;
 		model->ch[i].center = blob->ch[i].center;
 		model->ch[i].input = blob->ch[i].input;
+		model->ch[i].min_end_point = blob->ch[i].min_end_point;
+		model->ch[i].max_end_point = blob->ch[i].max_end_point;
 		model->ch[i].is_reversed = blob->ch[i].is_reversed ? true : false;
 		model->ch[i].map = def_map;
 	}

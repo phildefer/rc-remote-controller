@@ -42,6 +42,11 @@ int32_t ch2_min;
 int32_t ch3_min;
 int32_t ch4_min;
 
+int32_t ch1_max;
+int32_t ch2_max;
+int32_t ch3_max;
+int32_t ch4_max;
+
 extern objects_t objects;
 
 static int32_t clamp_min_percentage(int32_t percentage)
@@ -55,6 +60,16 @@ static int32_t clamp_min_percentage(int32_t percentage)
     return percentage;
 }
 
+static int32_t clamp_max_percentage(int32_t percentage)
+{
+    if (percentage < 0) {
+        return 0;
+    }
+    if (percentage > 100) {
+        return 100;
+    }
+    return percentage;
+}
 bool get_var_reverse1() {
     return reverse1;
 }
@@ -452,27 +467,117 @@ void set_var_device_name(const char *value) {
     device_name[sizeof(device_name) / sizeof(char) - 1] = 0;
 }
 
-
 void action_ch1_min_spin_decrement(lv_event_t *e) {
-
     lv_event_code_t code = lv_event_get_code(e);
     if(code == LV_EVENT_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
         lv_spinbox_decrement(objects.spin_ch1_min);
     }
 }
 
-
 void action_ch1_min_spin_increment(lv_event_t *e) {
-    // TODO: Implement action ch1_min_spin_increment here
-
     lv_event_code_t code = lv_event_get_code(e);
     if(code == LV_EVENT_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
         lv_spinbox_increment(objects.spin_ch1_min);
     }
 }
 
+void action_ch1_max_decrement(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_spinbox_decrement(objects.spin_ch1_max);
+    }
+}
 
+void action_ch1_max_increment(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_spinbox_increment(objects.spin_ch1_max);
+    }
+}
 
+void action_ch2_min_decrement(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_spinbox_decrement(objects.spin_ch2_min);
+    }
+}
+
+void action_ch2_min_increment(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_spinbox_increment(objects.spin_ch2_min);
+    }
+}
+
+void action_ch2_max_decrement(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_spinbox_decrement(objects.spin_ch2_max);
+    }
+}
+
+void action_ch2_max_increment(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_spinbox_increment(objects.spin_ch2_max);
+    }
+}
+
+void action_ch3_min_decrement(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_spinbox_decrement(objects.spin_ch3_min);
+    }
+}
+
+void action_ch3_min_increment(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_spinbox_increment(objects.spin_ch3_min);
+    }
+}
+
+void action_ch3_max_decrement(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_spinbox_decrement(objects.spin_ch3_max);
+    }
+}
+
+void action_ch3_max_increment(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_spinbox_increment(objects.spin_ch3_max);
+    }
+}
+
+void action_ch4_min_decrement(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_spinbox_decrement(objects.spin_ch4_min);
+    }
+}
+
+void action_ch4_min_increment(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_spinbox_increment(objects.spin_ch4_min);
+    }
+}
+
+void action_ch4_max_decrement(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_spinbox_decrement(objects.spin_ch4_max);
+    }
+}
+
+void action_ch4_max_increment(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_PRESSED || code == LV_EVENT_LONG_PRESSED_REPEAT) {
+        lv_spinbox_increment(objects.spin_ch4_max);
+    }
+}
 int32_t get_var_ch1_min() {
     return ch1_min;
 }
@@ -503,4 +608,37 @@ int32_t get_var_ch4_min() {
 
 void set_var_ch4_min(int32_t value) {
     ch4_min = clamp_min_percentage(value);
+}
+
+
+int32_t get_var_ch1_max() {
+    return ch1_max;
+}
+
+void set_var_ch1_max(int32_t value) {
+    ch1_max = clamp_max_percentage(value);
+}
+
+int32_t get_var_ch2_max() {
+    return ch2_max;
+}
+
+void set_var_ch2_max(int32_t value) {
+    ch2_max = clamp_max_percentage(value);
+}
+
+int32_t get_var_ch3_max() {
+    return ch3_max;
+}
+
+void set_var_ch3_max(int32_t value) {
+    ch3_max = clamp_max_percentage(value);
+}
+
+int32_t get_var_ch4_max() {
+    return ch4_max;
+}
+
+void set_var_ch4_max(int32_t value) {
+    ch4_max = clamp_max_percentage(value);
 }

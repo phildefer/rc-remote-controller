@@ -145,6 +145,8 @@ uint8_t def_map(
 	const uint16_t max,
 	const uint16_t center,
 	      uint16_t data,
+	const uint8_t  min_end_point,
+	const uint8_t  max_end_point,
 	const bool is_reversed) {
 
 	uint8_t mapped_value = 0;
@@ -157,11 +159,11 @@ uint8_t def_map(
 	}
 	if (data < center) {
 		/* Map from [min, center] to [0, 127] */
-		mapped_value = fmap(data, min, center, 0, 127);
+		mapped_value = fmap(data, min, center, min_end_point, 127);
 	}
 	else {
 		/* Map from [center, max] to [128, 255] */
-		mapped_value = fmap(data, center, max, 128, 255);
+		mapped_value = fmap(data, center, max, 128, max_end_point);
 	}
 
 	if (is_reversed) {
@@ -233,6 +235,8 @@ int fill_radio_info(struct radio_info_t *info, const struct rf_settings *setting
 				settings->ch_settings[i].max,
 				settings->ch_settings[i].center,
 				settings->ch_settings[i].input,
+				settings->ch_settings[i].min_end_point,
+				settings->ch_settings[i].max_end_point,
 				settings->ch_settings[i].is_reversed
 			);
 		} else {
@@ -988,8 +992,17 @@ int main(void)
 
 	/* Initialize file system & load active model */
 	if (model_init() != 0) {
-		LOG_ERR("model_init failed");
-		return -EIO;
+		LOG_ERR("model_init failed at first boot");
+
+		if (model_recover_during_init() != 0) {
+			LOG_ERR("Unrecoverable error after file system erase, aborting initialization");
+			return -EIO;
+		}
+
+		if (model_init() != 0) {
+			LOG_ERR("model_init failed at second boot");
+			return -EIO;
+		}
 	}
 	set_var_load_bar_progress(10);
 
@@ -1084,7 +1097,7 @@ int main(void)
 	while (true) {
 		if (display_touch_wake_service_take_main_screen_request(
 			    &display_touch_wake)) {
-			loadScreen(SCREEN_ID_MAIN);
+			LOG_INF("Touchscreen wake service requested main screen");
 		}
 
 		/* Update counter */

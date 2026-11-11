@@ -34,7 +34,11 @@ enum FlowGlobalVariables {
     FLOW_GLOBAL_VARIABLE_CH1_MIN = 18,
     FLOW_GLOBAL_VARIABLE_CH2_MIN = 19,
     FLOW_GLOBAL_VARIABLE_CH3_MIN = 20,
-    FLOW_GLOBAL_VARIABLE_CH4_MIN = 21
+    FLOW_GLOBAL_VARIABLE_CH4_MIN = 21,
+    FLOW_GLOBAL_VARIABLE_CH1_MAX = 22,
+    FLOW_GLOBAL_VARIABLE_CH2_MAX = 23,
+    FLOW_GLOBAL_VARIABLE_CH3_MAX = 24,
+    FLOW_GLOBAL_VARIABLE_CH4_MAX = 25
 };
 
 // Native global variables
@@ -83,6 +87,14 @@ extern int32_t get_var_ch3_min();
 extern void set_var_ch3_min(int32_t value);
 extern int32_t get_var_ch4_min();
 extern void set_var_ch4_min(int32_t value);
+extern int32_t get_var_ch1_max();
+extern void set_var_ch1_max(int32_t value);
+extern int32_t get_var_ch2_max();
+extern void set_var_ch2_max(int32_t value);
+extern int32_t get_var_ch3_max();
+extern void set_var_ch3_max(int32_t value);
+extern int32_t get_var_ch4_max();
+extern void set_var_ch4_max(int32_t value);
 
 #ifdef __cplusplus
 }

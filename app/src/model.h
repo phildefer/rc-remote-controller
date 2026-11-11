@@ -35,6 +35,8 @@ typedef uint8_t (*map_t)(
     const uint16_t max,
     const uint16_t center,
           uint16_t data,
+    const uint8_t  min_end_point,
+    const uint8_t  max_end_point,
     const bool is_reversed);
 
 struct channel_map {
@@ -42,6 +44,8 @@ struct channel_map {
     uint16_t max;
     uint16_t center;
     uint16_t input;
+    uint8_t min_end_point;
+    uint8_t max_end_point;
     bool is_reversed;
     map_t map;
 };
@@ -65,6 +69,8 @@ extern uint8_t def_map(
 	const uint16_t max,
 	const uint16_t center,
 	      uint16_t data,
+    const uint8_t  min_end_point,
+    const uint8_t  max_end_point,
 	const bool is_reversed);
 
 /* Initialize UI active model & UI model list.
@@ -91,6 +97,8 @@ int model_remove(char *model_name);
  * return 0 or error code.
  */
 int model_load(const char *model_name);
+
+int model_recover_during_init(void);
 
 #ifdef __cplusplus
 }

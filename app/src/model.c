@@ -27,24 +27,15 @@ model_t active_model;
 
 static model_t new_model;
 
-#define MODEL_MIN_ADC_SPAN 127
+#define MODEL_MIN_SPAN (127)
 
-static int32_t model_min_to_percentage(uint16_t min)
-{
-    int32_t span = MODEL_MIN_ADC_SPAN;
-    int32_t percentage =
-        ((CALIBRATION_OFFSET + span - (int32_t)min) * 100) / span;
+/* Adjust the minimum value of target RF based on a percentage
+   For the minimum value, we want
+        1. 100% to 0 (lowest value)
+        2. 0% to MODEL_MIN_SPAN (Middle range value)
+*/
 
-    if (percentage < 0) {
-        return 0;
-    }
-    if (percentage > 100) {
-        return 100;
-    }
-    return percentage;
-}
-
-static uint16_t model_percentage_to_min(int32_t percentage)
+static uint8_t model_percentage_to_min(int32_t percentage)
 {
     if (percentage < 0) {
         percentage = 0;
@@ -52,8 +43,40 @@ static uint16_t model_percentage_to_min(int32_t percentage)
         percentage = 100;
     }
 
-    return CALIBRATION_OFFSET +
-           ((100 - percentage) * MODEL_MIN_ADC_SPAN) / 100;
+    return ((100 - percentage) * MODEL_MIN_SPAN) / 100;
+}
+
+static uint8_t model_min_to_percentage(uint8_t min)
+{
+    if (min < 0) {
+        min = 0;
+    } else if (min > MODEL_MIN_SPAN) {
+        min = MODEL_MIN_SPAN;
+    }
+
+    return 100 - ((min * 100) / MODEL_MIN_SPAN);
+}
+
+static uint8_t model_percentage_to_max(uint8_t percentage)
+{
+    if (percentage < 0) {
+        percentage = 0;
+    } else if (percentage > 100) {
+        percentage = 100;
+    }
+
+    return 255 - ((100 - percentage) * MODEL_MIN_SPAN) / 100;
+}
+
+static uint8_t model_max_to_percentage(uint8_t max)
+{
+    if (max < MODEL_MIN_SPAN) {
+        max = MODEL_MIN_SPAN;
+    } else if (max > 255) {
+        max = 255;
+    }
+
+    return 100 - ((255 - max) * 100) / MODEL_MIN_SPAN;
 }
 
 /**
@@ -73,6 +96,8 @@ static int model_create(const char *name)
         new_model.ch[j].max = ADC_MAX_VALUE-CALIBRATION_OFFSET;
         new_model.ch[j].center = ADC_MAX_VALUE / 2;
         new_model.ch[j].input = ADC_MAX_VALUE / 2;
+        new_model.ch[j].min_end_point = 0;
+        new_model.ch[j].max_end_point = 255;
         new_model.ch[j].is_reversed = false;
         new_model.ch[j].map = def_map;
     }
@@ -99,8 +124,8 @@ int model_init(void)
     
 	if (rc != 0) {
 		LOG_ERR("model_fs_init failed (%d)", rc);
-		return rc;
-	}
+        return rc;
+    }
 
 	rc = model_fs_list_models(buf, &models_num);
 	if (rc < 0) {
@@ -190,11 +215,15 @@ int model_load(const char *model_name)
 	set_var_reverse4(active_model.ch[LACET].is_reversed);
     active_model.used = true; // Ensure the slot is marked as used
     set_var_device_name(active_model.name);
-    set_var_ch1_min(model_min_to_percentage(active_model.ch[ROULIS].min));
-    set_var_ch2_min(model_min_to_percentage(active_model.ch[TANGAGE].min));
-    set_var_ch3_min(model_min_to_percentage(active_model.ch[GAZ].min));
-    set_var_ch4_min(model_min_to_percentage(active_model.ch[LACET].min));
-	
+    set_var_ch1_min(model_min_to_percentage(active_model.ch[ROULIS].min_end_point));
+    set_var_ch2_min(model_min_to_percentage(active_model.ch[TANGAGE].min_end_point));
+    set_var_ch3_min(model_min_to_percentage(active_model.ch[GAZ].min_end_point));
+    set_var_ch4_min(model_min_to_percentage(active_model.ch[LACET].min_end_point));
+    set_var_ch1_max(model_max_to_percentage(active_model.ch[ROULIS].max_end_point));
+    set_var_ch2_max(model_max_to_percentage(active_model.ch[TANGAGE].max_end_point));
+    set_var_ch3_max(model_max_to_percentage(active_model.ch[GAZ].max_end_point));
+    set_var_ch4_max(model_max_to_percentage(active_model.ch[LACET].max_end_point));
+
 	return rc;
 }
 
@@ -217,10 +246,14 @@ int model_store(const struct channel_map *map)
 	active_model.ch[GAZ].is_reversed = get_var_reverse3();
 	active_model.ch[LACET].is_reversed = get_var_reverse4();
 
-    active_model.ch[ROULIS].min = model_percentage_to_min(get_var_ch1_min());
-    active_model.ch[TANGAGE].min = model_percentage_to_min(get_var_ch2_min());
-    active_model.ch[GAZ].min = model_percentage_to_min(get_var_ch3_min());
-    active_model.ch[LACET].min = model_percentage_to_min(get_var_ch4_min());
+    active_model.ch[ROULIS].min_end_point = model_percentage_to_min(get_var_ch1_min());
+    active_model.ch[TANGAGE].min_end_point = model_percentage_to_min(get_var_ch2_min());
+    active_model.ch[GAZ].min_end_point = model_percentage_to_min(get_var_ch3_min());
+    active_model.ch[LACET].min_end_point = model_percentage_to_min(get_var_ch4_min());
+    active_model.ch[ROULIS].max_end_point = model_percentage_to_max(get_var_ch1_max());
+    active_model.ch[TANGAGE].max_end_point = model_percentage_to_max(get_var_ch2_max());
+    active_model.ch[GAZ].max_end_point = model_percentage_to_max(get_var_ch3_max());
+    active_model.ch[LACET].max_end_point = model_percentage_to_max(get_var_ch4_max());
 
     /* Save the model to persistent storage */
     return model_fs_save_model(active_model.name, &active_model);
@@ -276,10 +309,14 @@ int model_remove(char *model_name)
             /* No other models exist, create a default model */
             LOG_INF("No other models found, creating default model");
             model_create("Default Model");
-            set_var_ch1_min(100);
-            set_var_ch2_min(100);
-            set_var_ch3_min(100);
-            set_var_ch4_min(100);
+            set_var_ch1_min(model_min_to_percentage(new_model.ch[ROULIS].min_end_point));
+            set_var_ch2_min(model_min_to_percentage(new_model.ch[TANGAGE].min_end_point));
+            set_var_ch3_min(model_min_to_percentage(new_model.ch[GAZ].min_end_point));
+            set_var_ch4_min(model_min_to_percentage(new_model.ch[LACET].min_end_point));
+            set_var_ch1_max(model_max_to_percentage(new_model.ch[ROULIS].max_end_point));
+            set_var_ch2_max(model_max_to_percentage(new_model.ch[TANGAGE].max_end_point));
+            set_var_ch3_max(model_max_to_percentage(new_model.ch[GAZ].max_end_point));
+            set_var_ch4_max(model_max_to_percentage(new_model.ch[LACET].max_end_point));
             rc = model_store(new_model.ch);
             set_var_device_list("");
             if (rc != 0) {
@@ -298,4 +335,19 @@ int model_remove(char *model_name)
         }
     }
     return rc; // Success
+}
+
+int model_recover_during_init(void) {
+
+    int rc = 0;
+
+    LOG_INF("Entering recovery process: Erasing all models and reinitializing model storage");
+    rc = model_fs_erase_all();
+
+    if (rc != 0) {
+        LOG_ERR("model_fs_erase_all failed (%d)", rc);
+        return rc;
+    }
+    LOG_INF("Reinitializing model storage after erase");
+    return rc;
 }
