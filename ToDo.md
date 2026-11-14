@@ -3,8 +3,8 @@ this file gathers all the remaining requirements (todo) to be implemented for th
 
 ## Requirements (todo)
 1. Be able to measure battery level and display it on the main screen
-2. Implement 'end point' settings in the settings UI panel to se the 'min' and 'max' of each channel.
-3. Revisit the 'display' of all channels for debug in a special panel instead of displaying it on 'main' screen in the header 
+2. Implement 'end point' settings in the settings UI panel to se the 'min' and 'max' of each channel. ==> DONE
+3. Revisit the 'display' of all channels for debug in a special panel instead of displaying it on 'main' screen in the header ==> DONE
 4. Implement 'Mixing' features between 2 channels (example for Elevon and V Tail)
 5. Implement 'curve' of channels: be able to change from a linear function to a more complex (logarithmic) function for each channel 
 6. Implement hold throttle (protection) function and be able to assign it to a button
@@ -17,4 +17,5 @@ this file gathers all the remaining requirements (todo) to be implemented for th
     a. Battery level of Rx Device
     b. GPS Data
     c. Position Data
-13. Optimize power consumption to reduce (Backlight & Display switch-off)
+13. Optimize power consumption to reduce (Backlight & Display switch-off) ==> DONE
+14. Implement binding mechanism that scan particular RF channel to recieve the receiver characteristics such as dedicated reception/transmission channels then swich to remote controller onto this particular reception/transmission channels 
